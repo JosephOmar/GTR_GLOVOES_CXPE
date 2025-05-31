@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 import pytz
 from app.core.utils.real_data_view.columns_names import TEAM, DATE, TIME_INTERVAL, FORECAST_RECEIVED, FORECAST_AHT, FORECAST_ABSENTEEISM, REQUIRED_AGENTS, SCHEDULED_AGENTS, FORECAST_HOURS, SCHEDULED_HOURS, SERVICE_LEVEL, REAL_RECEIVED, SAT_SAMPLES, SAT_ONGOING, SAT_INTERVAL, SAT_PROMOTERS, REAL_AGENTS
@@ -102,16 +103,17 @@ def clean_assembled_data(data_chat: pd.DataFrame, data_call: pd.DataFrame) -> pd
     data_others = data[~data[TEAM].isin(merge_queues)].copy()
 
     data_customer = (
-        data_customer
-        # puedes agrupar por fecha y hora si lo deseas
-        .groupby([DATE, TIME_INTERVAL])
-        .apply(lambda grp: pd.Series({
-            REAL_RECEIVED: grp[REAL_RECEIVED].sum(),
-            SERVICE_LEVEL: (grp[SERVICE_LEVEL] * grp[REAL_RECEIVED]
-                            ).sum() / grp[REAL_RECEIVED].sum()
-        }))
-        .reset_index()
-    )
+    data_customer
+    .groupby([DATE, TIME_INTERVAL])
+    .apply(lambda grp: pd.Series({
+        REAL_RECEIVED: grp[REAL_RECEIVED].sum(),
+        SERVICE_LEVEL: (
+            (grp[SERVICE_LEVEL] * grp[REAL_RECEIVED]).sum() / grp[REAL_RECEIVED].sum()
+            if grp[REAL_RECEIVED].sum() != 0 else np.nan
+        )
+    }))
+    .reset_index()
+)
     data_customer[TEAM] = 'CHAT CUSTOMER'
 
     # 7) Renombrar otros equipos
