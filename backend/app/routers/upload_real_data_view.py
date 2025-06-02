@@ -237,7 +237,7 @@ async def upload_real_data(
     session.commit()
 
     return {
-        "message": f"Datos procesados: {len(df)} filas. Nuevos: {len(nuevos_registros)}. Actualizados: {len(df) - len(nuevos_registros)} (solo si estaban incompletos)."
+        "message": f"Datos procesados: {len(df)} filas. Nuevos: {len(nuevos_registros)}. Actualizados: {len(df) - len(nuevos_registros)}."
     }
 
 
