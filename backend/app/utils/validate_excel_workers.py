@@ -1,4 +1,3 @@
-import re
 from fastapi import HTTPException
 
 # Función para validar si un archivo es Excel (.xlsx) o CSV y si contiene parte del nombre esperado

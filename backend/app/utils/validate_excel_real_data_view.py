@@ -5,6 +5,8 @@ def validate_excel_real_data_view(file_name: str) -> str:
         "planned_data": "planned_data",
         "assembled_chat": "assembled_data_chat",
         "assembled_call": "assembled_data_call",
+        "looker_customer":"looker_data_customer",
+        "looker_rider":"looker_data_rider",
         "sat_customer_total": "kustomer_data_cr_total",
         "sat_customer": "kustomer_data_cr_range",
         "sat_rider_total": "kustomer_data_rd_total",

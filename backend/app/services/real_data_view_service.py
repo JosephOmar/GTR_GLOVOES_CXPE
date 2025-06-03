@@ -35,8 +35,8 @@ def read_file_safely(file_stream: io.BytesIO, filename: str) -> pd.DataFrame:
         raise ValueError(f"Formato de archivo no soportado: {filename}")
 
 
-async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile, file3: UploadFile, file4: UploadFile, file5: UploadFile, file6: UploadFile, file7: UploadFile, file8: UploadFile):
-    files = [file1, file2, file3, file4, file5, file6, file7, file8]
+async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile, file3: UploadFile, file4: UploadFile, file5: UploadFile, file6: UploadFile, file7: UploadFile, file8: UploadFile, file9: UploadFile, file10: UploadFile):
+    files = [file1, file2, file3, file4, file5, file6, file7, file8, file9, file10]
 
     file1_data = None
     file2_data = None
@@ -46,6 +46,8 @@ async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile
     file6_data = None
     file7_data = None
     file8_data = None
+    file9_data = None
+    file10_data = None
 
     print("📥 Procesando archivos subidos:")
     
@@ -87,6 +89,12 @@ async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile
         elif "kustomer_data_real_agents" in new_filename.lower():
             print("✅ Asignado a file8_data")
             file8_data = data
+        elif "looker_data_customer" in new_filename.lower():
+            print("✅ Asignado a file9_data")
+            file9_data = data
+        elif "looker_data_rider" in new_filename.lower():
+            print("✅ Asignado a file10_data")
+            file10_data = data
         else:
             print("⚠️  Archivo ignorado (nombre no reconocido)")
 
@@ -100,12 +108,14 @@ async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile
     if file6_data is None: missing.append("kustomer_data_rd_range")
     if file7_data is None: missing.append("kustomer_data_rd_total")
     if file8_data is None: missing.append("kustomer_data_real_agents")
+    if file9_data is None: missing.append("looker_data_customer")
+    if file10_data is None: missing.append("looker_data_rider")
 
     if missing:
         print("🚫 Archivos faltantes:", ", ".join(missing))
         raise ValueError("Faltan archivos requeridos para realizar el merge de real_data_view.")
 
     print("✅ Todos los archivos requeridos fueron cargados correctamente.")
-    data = merge_data_view(file1_data, file2_data, file3_data, file4_data, file5_data, file6_data, file7_data, file8_data)
+    data = merge_data_view(file1_data, file2_data, file3_data, file4_data, file5_data, file6_data, file7_data, file8_data, file9_data, file10_data)
 
     return data

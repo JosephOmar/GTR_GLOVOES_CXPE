@@ -11,13 +11,6 @@ from datetime import date, datetime, time
 router = APIRouter()
 
 
-def safe_int(value):
-    try:
-        return int(value) if value is not None else None
-    except:
-        return None
-
-
 def safe_str(value):
     try:
         return str(value) if value is not None else None
@@ -35,9 +28,22 @@ def safe_date(value):
         return pd.to_datetime(value).date()
     except Exception:
         return None
-# -------------------------
-# Ruta para subir y registrar los trabajadores
-# -------------------------
+
+
+def safe_int(value):
+    """Convierte un valor a int, devolviendo None si no es posible."""
+    try:
+        return int(value) if value is not None else None
+    except (ValueError, TypeError):
+        return None
+
+
+def safe_float(value):
+    """Convierte un valor a float, devolviendo None si no es posible."""
+    try:
+        return float(value) if value is not None else None
+    except (ValueError, TypeError):
+        return None
 
 
 @router.post("/upload-real-data-view/")
@@ -50,39 +56,23 @@ async def upload_real_data(
     file6: UploadFile,
     file7: UploadFile,
     file8: UploadFile,
+    file9: UploadFile,
+    file10: UploadFile,
     session: Session = Depends(get_session)
 ):
     def is_record_complete(record: RealDataView) -> bool:
-        if record.team == "CALL VENDORS":
-            return all([
-                record.forecast_received is not None,
-                record.forecast_aht is not None,
-                record.forecast_absenteeism is not None,
-                record.required_agents is not None,
-                record.scheduled_agents is not None,
-                record.forecast_hours is not None,
-                record.scheduled_hours is not None,
-                record.service_level is not None,
-                record.real_received is not None,
-                # ❌ omitimos: sat_samples, sat_ongoing, sat_promoters, sat_interval
+        required_fields = [
+            "forecast_received", "required_agents", "scheduled_agents", "forecast_hours",
+            "scheduled_hours", "service_level", "real_received", "agents_online", "agents_training", "agents_aux"
+        ]
+        if record.team != "CALL VENDORS":
+            required_fields.extend([
+                "sat_samples", "sat_ongoing", "sat_promoters", "sat_interval", "sat_abuser", "aht"
             ])
-        else:
-            return all([
-                record.forecast_received is not None,
-                record.forecast_aht is not None,
-                record.forecast_absenteeism is not None,
-                record.required_agents is not None,
-                record.scheduled_agents is not None,
-                record.forecast_hours is not None,
-                record.scheduled_hours is not None,
-                record.service_level is not None,
-                record.real_received is not None,
-                record.sat_samples is not None,
-                record.sat_ongoing is not None,
-                record.sat_promoters is not None,
-            ])
+        return all(getattr(record, field) is not None for field in required_fields)
 
-    df = await handle_file_upload_real_data_view(file1, file2, file3, file4, file5, file6, file7, file8)
+    # Simplify the file upload process
+    df = await handle_file_upload_real_data_view(file1, file2, file3, file4, file5, file6, file7, file8, file9, file10)
     df = df.where(pd.notnull(df), None)
 
     existing_records = session.exec(select(RealDataView)).all()
@@ -92,7 +82,27 @@ async def upload_real_data(
     }
 
     nuevos_registros = []
-    current_date = date.today()  # Obtener la fecha actual
+    current_date = date.today()
+
+    # Helper function to update or create records
+    def update_or_create_record(row, record=None):
+        fields_to_update = [
+            "forecast_received","required_agents", "scheduled_agents", "forecast_hours",
+            "scheduled_hours", "service_level", "real_received",
+            "agents_online", "agents_training", "agents_aux", "sat_samples", "sat_ongoing", "sat_promoters", "sat_interval",
+            "sat_abuser", "aht"
+        ]
+        for field in fields_to_update:
+            if field in ["forecast_hours", "scheduled_hours","service_level", "sat_ongoing", "sat_promoters", "sat_interval","sat_abuser"]:
+                # Use safe_float for fields that are expected to be floats
+                val = safe_float(row.get(field))
+            else:
+                # Use safe_int for the rest
+                val = safe_int(row.get(field))
+
+            if val is not None:
+                setattr(record, field, val)
+        return record
 
     for _, row in df.iterrows():
         team = str(row["team"]).strip()
@@ -102,133 +112,22 @@ async def upload_real_data(
         key = (team, date_val, time_interval)
         if key in existing_map:
             record = existing_map[key]
-            
-            # Si el registro es del día actual, ignorar is_record_complete y actualizar todos los campos si no están vacíos
+
             if record.date == current_date:
-                # Actualizar cualquier dato, incluso si está vacío
-                val = safe_int(row["forecast_received"])
-                if val is not None:
-                    record.forecast_received = val
+                # Update all fields, even if empty
+                record = update_or_create_record(row, record)
 
-                val = safe_int(row["forecast_aht"])
-                if val is not None:
-                    record.forecast_aht = val
-
-                val = safe_int(row["forecast_absenteeism"])
-                if val is not None:
-                    record.forecast_absenteeism = val
-
-                val = safe_int(row["required_agents"])
-                if val is not None:
-                    record.required_agents = val
-
-                val = safe_int(row["scheduled_agents"])
-                if val is not None:
-                    record.scheduled_agents = val
-
-                if row["forecast_hours"] is not None:
-                    record.forecast_hours = row["forecast_hours"]
-
-                if row["scheduled_hours"] is not None:
-                    record.scheduled_hours = row["scheduled_hours"]
-
-                if row["service_level"] is not None:
-                    record.service_level = row["service_level"]
-
-                val = safe_int(row["real_received"])
-                if val is not None:
-                    record.real_received = val
-
-                val = safe_int(row["real_agents"])
-                if val is not None:
-                    record.real_agents = val
-
-                val = safe_int(row["sat_samples"])
-                if val is not None:
-                    record.sat_samples = val
-
-                if row["sat_ongoing"] is not None:
-                    record.sat_ongoing = row["sat_ongoing"]
-
-                if row["sat_promoters"] is not None:
-                    record.sat_promoters = row["sat_promoters"]
-
-                if row["sat_interval"] is not None:
-                    record.sat_interval = row["sat_interval"]
-
-            # Si el registro no es del día actual y no está completo, solo actualizar los campos incompletos
             elif not is_record_complete(record):
-                # Solo actualizar si el nuevo dato NO es None
-                val = safe_int(row["forecast_received"])
-                if val is not None:
-                    record.forecast_received = val
-
-                val = safe_int(row["forecast_aht"])
-                if val is not None:
-                    record.forecast_aht = val
-
-                val = safe_int(row["forecast_absenteeism"])
-                if val is not None:
-                    record.forecast_absenteeism = val
-
-                val = safe_int(row["required_agents"])
-                if val is not None:
-                    record.required_agents = val
-
-                val = safe_int(row["scheduled_agents"])
-                if val is not None:
-                    record.scheduled_agents = val
-
-                if row["forecast_hours"] is not None:
-                    record.forecast_hours = row["forecast_hours"]
-
-                if row["scheduled_hours"] is not None:
-                    record.scheduled_hours = row["scheduled_hours"]
-
-                if row["service_level"] is not None:
-                    record.service_level = row["service_level"]
-
-                val = safe_int(row["real_received"])
-                if val is not None:
-                    record.real_received = val
-
-                val = safe_int(row["real_agents"])
-                if val is not None:
-                    record.real_agents = val
-
-                val = safe_int(row["sat_samples"])
-                if val is not None:
-                    record.sat_samples = val
-
-                if row["sat_ongoing"] is not None:
-                    record.sat_ongoing = row["sat_ongoing"]
-
-                if row["sat_promoters"] is not None:
-                    record.sat_promoters = row["sat_promoters"]
-
-                if row["sat_interval"] is not None:
-                    record.sat_interval = row["sat_interval"]
+                # Update only missing fields
+                record = update_or_create_record(row, record)
 
         else:
             new_record = RealDataView(
                 team=team,
                 time_interval=time_interval,
-                date=date_val,
-                forecast_received=safe_int(row["forecast_received"]),
-                forecast_aht=safe_int(row["forecast_aht"]),
-                forecast_absenteeism=safe_int(row["forecast_absenteeism"]),
-                required_agents=safe_int(row["required_agents"]),
-                scheduled_agents=safe_int(row["scheduled_agents"]),
-                forecast_hours=row["forecast_hours"],
-                scheduled_hours=row["scheduled_hours"],
-                service_level=row["service_level"],
-                real_received=safe_int(row["real_received"]),
-                real_agents=safe_int(row["real_agents"]),
-                sat_samples=safe_int(row["sat_samples"]),
-                sat_ongoing=row["sat_ongoing"],
-                sat_promoters=row["sat_promoters"],
-                sat_interval=row["sat_interval"]
+                date=date_val
             )
+            new_record = update_or_create_record(row, new_record)
             nuevos_registros.append(new_record)
 
     if nuevos_registros:
@@ -239,7 +138,6 @@ async def upload_real_data(
     return {
         "message": f"Datos procesados: {len(df)} filas. Nuevos: {len(nuevos_registros)}. Actualizados: {len(df) - len(nuevos_registros)}."
     }
-
 
 
 @router.get("/real-data-view/", response_model=List[RealDataView])
