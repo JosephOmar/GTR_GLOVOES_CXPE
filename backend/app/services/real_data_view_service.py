@@ -68,7 +68,7 @@ async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile
         if "planned_data" in new_filename.lower():
             print("✅ Asignado a file1_data")
             file1_data = data
-        elif "assembled_data_chat" in new_filename.lower():
+        elif "talkdesk_data" in new_filename.lower():
             print("✅ Asignado a file2_data")
             file2_data = data
         elif "assembled_data_call" in new_filename.lower():
@@ -101,7 +101,7 @@ async def handle_file_upload_real_data_view(file1: UploadFile, file2: UploadFile
     # Log final para verificar cuál faltó
     missing = []
     if file1_data is None: missing.append("planned_data")
-    if file2_data is None: missing.append("assembled_data_chat")
+    if file2_data is None: missing.append("talkdes_data")
     if file3_data is None: missing.append("assembled_data_call")
     if file4_data is None: missing.append("kustomer_data_cr_range")
     if file5_data is None: missing.append("kustomer_data_cr_total")

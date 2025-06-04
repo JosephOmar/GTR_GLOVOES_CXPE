@@ -38,7 +38,6 @@ def clean_real_agents(data: pd.DataFrame) -> pd.DataFrame:
 
     data[DATE] = pd.to_datetime(data[DATE]).dt.date
     # Imprimir para verificar que las fechas sean correctas
-    print(data[DATE].head())
 
     # Sumar las columnas de agentes
     data['Total_Agentes'] = data[AGENTS_ONLINE] + data[AGENTS_TRAINING] + data[AGENTS_AUX]

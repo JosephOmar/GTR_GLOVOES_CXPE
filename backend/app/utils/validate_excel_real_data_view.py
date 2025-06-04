@@ -3,7 +3,7 @@ from fastapi import HTTPException
 def validate_excel_real_data_view(file_name: str) -> str:
     name_mapping = {
         "planned_data": "planned_data",
-        "assembled_chat": "assembled_data_chat",
+        "talkdesk": "talkdesk_data",
         "assembled_call": "assembled_data_call",
         "looker_customer":"looker_data_customer",
         "looker_rider":"looker_data_rider",
