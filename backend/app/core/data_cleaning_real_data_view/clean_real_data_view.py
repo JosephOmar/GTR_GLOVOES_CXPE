@@ -54,4 +54,6 @@ def merge_data_view(
     # --- 4) Ordenar y resetear índice ---
     df_merged = df_merged.sort_values(by=[DATE, TEAM, TIME_INTERVAL]) \
                          .reset_index(drop=True)   
+    
+    print(df_merged[df_merged[TEAM] == 'CALL VENDORS']['aht'].head(25))
     return df_merged

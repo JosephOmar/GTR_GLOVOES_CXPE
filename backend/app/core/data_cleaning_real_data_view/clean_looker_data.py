@@ -59,6 +59,4 @@ def clean_looker_data(
 
         all_data = pd.concat([all_data, team_data_complete], ignore_index=True)
 
-    print(all_data[all_data[TEAM] == 'CHAT RIDER'].head(48))
-    
     return all_data

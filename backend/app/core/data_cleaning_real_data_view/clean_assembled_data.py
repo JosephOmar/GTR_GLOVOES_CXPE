@@ -52,6 +52,7 @@ def clean_assembled_data(data_call: pd.DataFrame, data_TD: pd.DataFrame ) -> pd.
     # Convertir AHT a segundos
     data_TD['Talk Time (seconds)'] = data_TD['Talk Time'].dt.total_seconds()
 
+
     # Calcular el AHT por cada rango de 30 minutos en segundos
     data_TD = data_TD.groupby('Time Block')['Talk Time (seconds)'].mean().reset_index()
 
@@ -59,9 +60,9 @@ def clean_assembled_data(data_call: pd.DataFrame, data_TD: pd.DataFrame ) -> pd.
     data_TD['Time Block'] = data_TD['Time Block'].dt.strftime('%H:%M')
 
     data_TD = data_TD.rename(columns={'Time Block': TIME_INTERVAL, 'Talk Time (seconds)': AHT})
-
+    data_TD[AHT] = data_TD[AHT].round(0)
     data_final = pd.merge(data_call, data_TD, on=[TIME_INTERVAL], how='outer')
-
+   
     return data_final
 
 # def clean_assembled_data(data_chat: pd.DataFrame, data_call: pd.DataFrame) -> pd.DataFrame:

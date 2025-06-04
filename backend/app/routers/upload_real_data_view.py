@@ -63,11 +63,11 @@ async def upload_real_data(
     def is_record_complete(record: RealDataView) -> bool:
         required_fields = [
             "forecast_received", "required_agents", "scheduled_agents", "forecast_hours",
-            "scheduled_hours", "service_level", "real_received", "agents_online", "agents_training", "agents_aux"
+            "scheduled_hours", "service_level", "real_received", "agents_online", "agents_training", "agents_aux", "aht"
         ]
         if record.team != "CALL VENDORS":
             required_fields.extend([
-                "sat_samples", "sat_ongoing", "sat_promoters", "sat_interval", "sat_abuser", "aht"
+                "sat_samples", "sat_ongoing", "sat_promoters", "sat_interval", "sat_abuser"
             ])
         return all(getattr(record, field) is not None for field in required_fields)
 
@@ -92,8 +92,18 @@ async def upload_real_data(
             "agents_online", "agents_training", "agents_aux", "sat_samples", "sat_ongoing", "sat_promoters", "sat_interval",
             "sat_abuser", "aht"
         ]
+
+        
         for field in fields_to_update:
-            if field in ["forecast_hours", "scheduled_hours","service_level", "sat_ongoing", "sat_promoters", "sat_interval","sat_abuser"]:
+
+            raw = row.get(field)
+
+            # Si la fila trae None, asignamos None explícitamente para que quede NULL en BD
+            if raw is None:
+                setattr(record, field, None)
+                continue
+            
+            if field in ["forecast_hours", "scheduled_hours","service_level", "sat_ongoing", "sat_promoters", "sat_interval","sat_abuser", "aht"]:
                 # Use safe_float for fields that are expected to be floats
                 val = safe_float(row.get(field))
             else:
