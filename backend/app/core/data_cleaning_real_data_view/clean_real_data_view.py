@@ -55,5 +55,6 @@ def merge_data_view(
     df_merged = df_merged.sort_values(by=[DATE, TEAM, TIME_INTERVAL]) \
                          .reset_index(drop=True)   
     
-    print(df_merged[df_merged[TEAM] == 'CALL VENDORS']['aht'].head(25))
+    print('holi xd')
+    print(df_merged[df_merged[TIME_INTERVAL] == '06:00'].tail(15))
     return df_merged
