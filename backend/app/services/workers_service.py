@@ -1,82 +1,103 @@
-import io
 import pandas as pd
-import chardet
-from fastapi import UploadFile
-from app.utils.validate_excel_workers import validate_excel_workers
-from app.core.data_cleaning_workers.merge_worker_cx import generate_worker_cx_table
-from app.core.data_cleaning_ubycall.merge_worker_ubycall import generate_worker_uby_table
+from fastapi import HTTPException
+from typing import List
+from sqlmodel import Session, select
 
+from app.services.utils.upload_service import handle_file_upload_generic
+from app.utils.validators.validate_excel_workers import validate_excel_workers
+from app.core.workers_concentrix.merge_worker_cx import generate_worker_cx_table
+from app.core.workers_ubycall.merge_worker_ubycall import generate_worker_uby_table
+from app.crud.worker import upsert_lookup_table, upsert_worker
+from app.models.worker import Role, Status, Campaign, Team, WorkType, ContractType, Worker
+from datetime import datetime
 
-def read_file_safely(file_stream: io.BytesIO, filename: str) -> pd.DataFrame:
-    """
-    Lee un archivo Excel o CSV con manejo de errores y detección automática de codificación.
-    """
-    file_stream.seek(0)
+def safe_date(value):
+    if pd.isna(value):
+        return None
+    if isinstance(value, datetime):
+        return value.date()  # Convierte datetime a date
+    try:
+        # Si viene como string, intenta parsear a date
+        return pd.to_datetime(value).date()
+    except Exception:
+        return None
 
-    if filename.endswith('.xlsx'):
-        try:
-            if "scheduling_ppp" in filename.lower():
-                return pd.read_excel(file_stream, header=2, skiprows=3, sheet_name="RESUMEN", engine='openpyxl')
-            elif "master_glovo" in filename.lower():
-                return pd.read_excel(file_stream, sheet_name="AGENTES_UBY",engine='openpyxl')
-            return pd.read_excel(file_stream, engine='openpyxl')
-        except Exception as e:
-            raise ValueError(f"Error leyendo archivo Excel {filename}: {str(e)}")
+async def process_and_persist_workers(
+    files: List,  # UploadFile
+    session: Session
+) -> int:
+    # 1) Leer y limpiar data
+    df = await handle_file_upload_generic(
+        files=files,
+        validator=validate_excel_workers,
+        keyword_to_slot={
+            "people_consultation":"people_consultation",
+            "scheduling_ppp":"scheduling_ppp",
+            "report_kustomer":"report_kustomer",
+            "master_glovo":"master_glovo",
+            "scheduling_ubycall":"scheduling_ubycall",
+        },
+        required_slots=["people_consultation","scheduling_ppp","report_kustomer"],
+        post_process=lambda people_consultation, scheduling_ppp, report_kustomer, **slots: pd.concat([
+            generate_worker_cx_table(people_consultation,scheduling_ppp,report_kustomer),
+            generate_worker_uby_table(
+                slots["master_glovo"],
+                slots["scheduling_ubycall"],
+                report_kustomer,
+                people_consultation
+            )
+        ])
+    )
 
-    elif filename.endswith('.csv'):
-        try:
-            raw_data = file_stream.read()
-            detected = chardet.detect(raw_data)
-            encoding = detected.get("encoding", "utf-8")
-            file_stream.seek(0)
-            return pd.read_csv(file_stream, encoding=encoding)
-        except Exception as e:
-            raise ValueError(f"Error leyendo archivo CSV {filename}: {str(e)}")
+    # 2) Mapeo lookups
+    df = df.where(pd.notnull(df), None)
+    role_map      = upsert_lookup_table(session, Role,       df["role"].tolist())
+    status_map    = upsert_lookup_table(session, Status,     df["status"].tolist())
+    campaign_map  = upsert_lookup_table(session, Campaign,   df["campaign"].tolist())
+    team_map      = upsert_lookup_table(session, Team,       df["team"].tolist())
+    worktype_map  = upsert_lookup_table(session, WorkType,   df["work_type"].tolist())
+    contract_map  = upsert_lookup_table(session, ContractType,df["contract_type"].tolist())
 
-    else:
-        raise ValueError(f"Formato de archivo no soportado: {filename}")
+    # 3) Crear instancias de Worker y persistir
+    count_new = 0
+    for row in df.to_dict(orient="records"):
+        data = {
+            "document":        str(row["document"]),
+            "name":            row["name"],
+            "role_id":         role_map.get(row["role"]),
+            "status_id":       status_map.get(row["status"]),
+            "campaign_id":     campaign_map.get(row["campaign"]),
+            "team_id":         team_map.get(row["team"]),
+            "manager":         row.get("manager"),
+            "supervisor":      row.get("supervisor"),
+            "coordinator":     row.get("coordinator"),
+            "work_type_id":    worktype_map.get(row["work_type"]),
+            "start_date":      safe_date(row.get("start_date")),
+            "termination_date":safe_date(row.get("termination_date")),
+            "contract_type_id":contract_map.get(row["contract_type"]),
+            "requirement_id":  row.get("requirement_id"),
+            "kustomer_id":     row.get("kustomer_id"),
+            "kustomer_name":   row.get("kustomer_name"),
+            "kustomer_email":  row.get("kustomer_email"),
+            "observation_1":   row.get("observation_1"),
+            "observation_2":   row.get("observation_2"),
+            "tenure":          row.get("tenure"),
+            "trainee":         row.get("trainee"),
+        }
+        # 1) Hacer el SELECT para ver si existe
+        stmt = select(Worker).where(Worker.document == str(row["document"]))
+        existing = session.exec(stmt).first()
 
+        # 2) Si existe, limpiar horarios viejos
+        if existing:
+            existing.schedules.clear()
+            existing.ubycall_schedules.clear()
 
-# Función para manejar la subida y procesamiento de los archivos
-async def handle_file_upload_workers(file1: UploadFile, file2: UploadFile, file3: UploadFile, file4: UploadFile, file5: UploadFile):
-    files = [file1, file2, file3, file4, file5]
+        # 3) Upsert de Worker (insert o update de campos)
+        worker = upsert_worker(session, data)
+        # Puedes opcionalmente contar sólo nuevos:
+        if session.is_modified(worker, include_collections=False) and not getattr(worker, "id", None):
+            count_new += 1
 
-    file1_data = None
-    file2_data = None
-    file3_data = None
-    file4_data = None
-    file5_data = None
-
-    for file in files:
-        new_filename = validate_excel_workers(file.filename)
-
-        file_content = await file.read()
-        file_stream = io.BytesIO(file_content)
-
-        try:
-            data = read_file_safely(file_stream, new_filename)
-        except Exception as e:
-            raise ValueError(f"Error procesando {new_filename}: {e}")
-
-        if "people_consultation" in new_filename.lower():
-            file1_data = data
-        elif "scheduling_ppp" in new_filename.lower():
-            file2_data = data
-        elif "report_kustomer" in new_filename.lower():
-            file3_data = data
-        elif "master_glovo" in new_filename.lower():
-            file4_data = data
-        elif "scheduling_ubycall" in new_filename.lower():
-            file5_data = data
-        else:
-            continue  # Ignorar otros archivos
-
-    if file1_data is not None and file2_data is not None and file3_data is not None:
-        worker_cx_data = generate_worker_cx_table(file1_data, file2_data, file3_data)
-        worker_uby_data = generate_worker_uby_table(file4_data, file5_data, file3_data, file1_data)
-
-        worker_data = pd.concat([worker_cx_data, worker_uby_data])
-    else:
-        raise ValueError("No se encontraron los archivos requeridos para realizar el merge (people_consultation, scheduling_ppp, report_kustomer).")
-
-    return worker_data
+    session.commit()
+    return len(df)

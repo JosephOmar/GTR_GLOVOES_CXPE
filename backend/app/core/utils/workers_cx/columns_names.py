@@ -43,3 +43,13 @@ CALL_VENDORS = "CALL VENDORS"
 
 GLOVO_SPAIN = "GLOVO ESPAÑA"
 GERENCIA = "GERENCIA"
+
+
+#! HORARIOS
+DATE = 'date'
+START_TIME = 'start_time'
+END_TIME = 'end_time'
+BREAK_START = 'break_start'
+BREAK_END = 'break_end'
+DAY = 'day'
+REST_DAY = 'rest_day'

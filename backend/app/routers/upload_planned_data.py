@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, Depends
 from sqlmodel import Session, select
 from typing import Dict
 from app.database.database import get_session  # Asegúrate que esto devuelve una Session de SQLModel
-from app.services.data_kpis_service import handle_file_upload_planned_data
+from app.services.report_kpis_service import repot_kpis_service
 from app.models.data_kpi import PlannedData
 import pandas as pd
 from datetime import date, datetime, time
@@ -40,7 +40,7 @@ async def upload_workers(
     session: Session = Depends(get_session)
 ):
     # Paso 1: Procesar los archivos y obtener el DataFrame limpio
-    df = await handle_file_upload_planned_data(file1)
+    df = await repot_kpis_service(file1)
     df = df.where(pd.notnull(df), None) 
 
     # Paso 2: Insertar la Planned Data

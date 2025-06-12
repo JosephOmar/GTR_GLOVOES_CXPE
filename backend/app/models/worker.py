@@ -80,6 +80,36 @@ class Worker(SQLModel, table=True):
     # Relación uno a muchos con Status
     status: "Status" = Relationship(back_populates="workers")
 
+    #! Relaciones a horarios
+    schedules: List["Schedule"] = Relationship(back_populates="worker", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
+    ubycall_schedules: List["UbycallSchedule"] = Relationship(back_populates="worker", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
+class UbycallSchedule(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    worker_document: str = Field(foreign_key="worker.document")
+    date: date
+    day: str
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+
+    # Relación hacia Worker
+    worker: Worker = Relationship(back_populates="ubycall_schedules")
+
+class Schedule(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    worker_document: str = Field(foreign_key="worker.document")
+    date: date
+    day: str
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    break_start: Optional[time] = None
+    break_end: Optional[time] = None
+    is_rest_day: bool
+
+    # Relación hacia Worker
+    worker: Worker = Relationship(back_populates="schedules")
+
 class Absence(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     worker_id: int = Field(foreign_key="worker.id")
@@ -94,19 +124,3 @@ class Attendance(SQLModel, table=True):
     login_time: time
     connection_time: time
     break_start: time
-
-class UbycallSchedule(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    worker_id: int = Field(foreign_key="worker.id")
-    date: date
-    start_time: time
-    end_time: time
-
-class Schedule(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    worker_id: int = Field(foreign_key="worker.id")
-    date: date
-    start_time: time
-    end_time: time
-    break_end: time
-    is_rest_day: bool

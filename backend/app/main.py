@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware  # <-- Importar middleware CO
 from sqlmodel import select
 from typing import Annotated
 from sqlmodel import Session
-from app.models.worker import Worker
 from app.database.database import get_session, create_db_and_tables
-from app.routers import upload_workers_cx
+from app.routers import worker
 from app.routers import upload_planned_data
-from app.routers import upload_real_data_view
+from app.routers import operational_view
+from app.routers import schedule
 
 # Iniciar FastAPI
 app = FastAPI()
@@ -21,9 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(upload_workers_cx.router)
+app.include_router(worker.router)
 app.include_router(upload_planned_data.router)
-app.include_router(upload_real_data_view.router)
+app.include_router(operational_view.router)
+app.include_router(schedule.router)
 
 # Crear la base de datos y las tablas cuando se inicia la aplicación
 create_db_and_tables()  # Llamada inicial
