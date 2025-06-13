@@ -8,6 +8,8 @@ from app.services.workers_service import process_and_persist_workers
 from app.models.worker import Worker
 from app.schemas.worker import WorkerRead
 from datetime import date, timedelta
+from app.routers.protected import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
@@ -27,9 +29,9 @@ async def upload_workers(
     response_model=List[WorkerRead],
     summary="Lista todos los trabajadores con sus horarios"
 )
-def read_workers(session: Session = Depends(get_session)):
+def read_workers(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # Cargamos role, status, campaign, etc. y además schedules y ubycall_schedules
-    current_day = date.today()
+    #current_day = date.today()
 
     statement = (
         select(Worker)
@@ -46,8 +48,8 @@ def read_workers(session: Session = Depends(get_session)):
     )
     workers = session.exec(statement).all()
 
-    for w in workers:
-        w.schedules = [s for s in w.schedules if s.date == current_day]
-        w.ubycall_schedules = [u for u in w.ubycall_schedules if u.date == current_day]
+    # for w in workers:
+    #     w.schedules = [s for s in w.schedules if s.date == current_day]
+    #     w.ubycall_schedules = [u for u in w.ubycall_schedules if u.date == current_day]
 
     return workers  

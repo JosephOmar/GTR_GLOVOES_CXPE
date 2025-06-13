@@ -7,7 +7,7 @@ from app.database.database import get_session, create_db_and_tables
 from app.routers import worker
 from app.routers import upload_planned_data
 from app.routers import operational_view
-from app.routers import schedule
+from app.routers import schedule, auth, protected
 
 # Iniciar FastAPI
 app = FastAPI()
@@ -25,6 +25,8 @@ app.include_router(worker.router)
 app.include_router(upload_planned_data.router)
 app.include_router(operational_view.router)
 app.include_router(schedule.router)
+app.include_router(auth.router)
+app.include_router(protected.router)
 
 # Crear la base de datos y las tablas cuando se inicia la aplicación
 create_db_and_tables()  # Llamada inicial
