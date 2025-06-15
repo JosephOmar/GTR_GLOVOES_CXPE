@@ -1,6 +1,6 @@
 # app/api/routers/real_data_view.py
 from typing import List
-from fastapi import APIRouter, UploadFile, Depends
+from fastapi import APIRouter, UploadFile, Depends, File
 from sqlmodel import Session
 
 from app.database.database import get_session
@@ -12,7 +12,7 @@ router = APIRouter(tags=["operational-view"])
 
 @router.post("/upload-operational-view/", summary="Carga y procesa datos reales")
 async def upload_real_data_view(
-    files: List[UploadFile],
+    files: List[UploadFile] = File(...),
     session: Session = Depends(get_session),
 ):
     """
