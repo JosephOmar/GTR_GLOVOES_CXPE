@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, Depends
+from fastapi import APIRouter, UploadFile, Depends, File
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from typing import List
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.post("/upload-workers/")
 async def upload_workers(
-    files: List[UploadFile],
+    files: List[UploadFile] = File(...),
     session: Session = Depends(get_session)
 ):
     count = await process_and_persist_workers(

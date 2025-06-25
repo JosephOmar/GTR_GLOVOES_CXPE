@@ -1,6 +1,6 @@
 from typing import List, Dict
 from datetime import date
-from fastapi import APIRouter, UploadFile, Depends
+from fastapi import APIRouter, UploadFile, Depends, File
 from sqlmodel import Session, select
 
 from app.database.database import get_session
@@ -11,8 +11,9 @@ router = APIRouter(tags=["schedules"])
 
 @router.post("/upload-schedules/", summary="Carga y persiste horarios desde Excel")
 async def upload_schedules(
-    file_concentrix: UploadFile,
-    file_ubycall: UploadFile,
+    files: List[UploadFile] = File(...),
+    week: int | None = None,
+    year: int | None = None,
     session: Session = Depends(get_session),
 ):
     """
@@ -21,8 +22,10 @@ async def upload_schedules(
     - Devuelve cuántos se insertaron y lista de documentos faltantes.
     """
     result = await process_and_persist_schedules(
-        [file_concentrix, file_ubycall],
-        session
+        files=files,
+        session=session,
+        week=week,
+        year=year,
     )
     return {
         "message": (

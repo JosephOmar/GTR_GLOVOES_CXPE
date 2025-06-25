@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import date, time
+import datetime
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -112,15 +113,14 @@ class Schedule(SQLModel, table=True):
 
 class Absence(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    worker_id: int = Field(foreign_key="worker.id")
+    worker_kustomer_id: int = Field(foreign_key="worker.kustomer_id")
     date: date
-    login_time: time
-    absence_reason: time
+    login_time: Optional[datetime.date] = Field(default=None)
 
 class Attendance(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    worker_id: int = Field(foreign_key="worker.id")
+    worker_kustomer_id: int = Field(foreign_key="worker.kustomer_id")
     date: date
-    login_time: time
-    connection_time: time
-    break_start: time
+    login_time: Optional[datetime.date] = Field(default=None)
+    connection_time: Optional[str] = Field(default=None, max_length=40) 
+

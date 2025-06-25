@@ -85,7 +85,7 @@ async def handle_file_upload_generic(
         # Buscar a qué slot va
         lower = safe_name.lower()
         for kw, slot in keyword_to_slot.items():
-            if kw in lower:
+            if kw in safe_name.lower():
                 slot_data[slot] = df
                 break
 

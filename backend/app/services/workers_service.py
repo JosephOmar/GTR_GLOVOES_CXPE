@@ -2,6 +2,7 @@ import pandas as pd
 from fastapi import HTTPException
 from typing import List
 from sqlmodel import Session, select
+from fastapi import UploadFile
 
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_workers import validate_excel_workers
@@ -10,6 +11,8 @@ from app.core.workers_ubycall.merge_worker_ubycall import generate_worker_uby_ta
 from app.crud.worker import upsert_lookup_table, upsert_worker
 from app.models.worker import Role, Status, Campaign, Team, WorkType, ContractType, Worker
 from datetime import datetime
+import logging
+
 
 def safe_date(value):
     if pd.isna(value):
@@ -23,9 +26,17 @@ def safe_date(value):
         return None
 
 async def process_and_persist_workers(
-    files: List,  # UploadFile
+    files: List[UploadFile],  # UploadFile
     session: Session
 ) -> int:
+    
+    if not files:
+        raise HTTPException(status_code=422, detail="No files uploaded")
+    
+    logging.info("Archivos recibidos:")
+    for file in files:
+        logging.info(f"Archivo: {file.filename}")
+
     # 1) Leer y limpiar data
     df = await handle_file_upload_generic(
         files=files,
@@ -91,7 +102,7 @@ async def process_and_persist_workers(
         # 2) Si existe, limpiar horarios viejos
         if existing:
             existing.schedules.clear()
-            existing.ubycall_schedules.clear()
+            existing.ubycall_schedules.clear()  
 
         # 3) Upsert de Worker (insert o update de campos)
         worker = upsert_worker(session, data)

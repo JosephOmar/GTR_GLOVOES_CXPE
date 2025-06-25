@@ -4,13 +4,13 @@ from app.utils.validators.common import validate_and_map_filename
 
 # Mapeo específico
 _WORKERS_MAPPING = {
-    "ConsultaPersonal":         "people_consultation",
-    "Programación Glovo":       "scheduling_ppp",
-    "report":                   "report_kustomer",
-    "Maestro_Glovo":            "master_glovo",
-    "Ubycall":                  "scheduling_ubycall",
-    "Reporte_Descarga_Horario": "schedule_concentrix"
+    "people_consultation":      "people_consultation",
+    "scheduling_ppp":       "scheduling_ppp",
+    "report_kustomer":                   "report_kustomer",
+    "master_glovo":            "master_glovo",
+    "scheduling_ubycall":                  "scheduling_ubycall",
 }
+
 
 def validate_excel_workers(file_name: str) -> str:
     return validate_and_map_filename(

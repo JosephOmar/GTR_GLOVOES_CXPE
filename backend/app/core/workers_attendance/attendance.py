@@ -41,7 +41,7 @@ def clean_report(data: pd.DataFrame) -> pd.DataFrame    :
         secs = ms / 1000
         h = int(secs // 3600)
         m = int((secs % 3600) // 60)
-        return f"{h} h {m} m"
+        return f"{h}h {m}m"
     
     # 7) Aplicar conversión sobre la columna de milisegundos
     df[TOTAL_TIME] = df[TOTAL_TIME].apply(ms_to_h_m)
