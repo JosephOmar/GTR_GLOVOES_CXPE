@@ -46,7 +46,7 @@ def clean_people_consultation(data: pd.DataFrame) -> pd.DataFrame:
     data = data.rename(columns=COLUMNS_PEOPLE_CONSULTATION)
 
     current_date = datetime.now()
-    fecha_limite = current_date - timedelta(days=30)
+    fecha_limite = current_date - timedelta(days=15)
 
     cond_activo = data[STATUS].str.lower() == 'activo'
     cond_inactivo_reciente = (

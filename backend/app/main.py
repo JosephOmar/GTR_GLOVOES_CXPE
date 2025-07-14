@@ -8,6 +8,7 @@ from app.routers import worker
 from app.routers import upload_planned_data
 from app.routers import operational_view
 from app.routers import schedule, auth, protected
+from app.routers import google_sheets_proxy
 
 # Iniciar FastAPI
 app = FastAPI()
@@ -15,7 +16,7 @@ app = FastAPI()
 # Configuración CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4321", "https://gtr-cx-glovo-es.netlify.app"],  # Aquí coloca la URL de tu frontend (ejemplo React/Astro)
+    allow_origins=["http://localhost:4321", "https://gtr-cx-glovo-es.netlify.app", "*"],  # Aquí coloca la URL de tu frontend (ejemplo React/Astro)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +28,7 @@ app.include_router(operational_view.router)
 app.include_router(schedule.router)
 app.include_router(auth.router)
 app.include_router(protected.router)
+app.include_router(google_sheets_proxy.router)
 
 # Crear la base de datos y las tablas cuando se inicia la aplicación
 create_db_and_tables()  # Llamada inicial
