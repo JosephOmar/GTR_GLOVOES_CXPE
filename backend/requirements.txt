@@ -3,6 +3,7 @@ anyio==4.9.0
 bcrypt==4.3.0
 certifi==2025.4.26
 chardet==5.2.0
+charset-normalizer==3.4.2
 click==8.1.8
 colorama==0.4.6
 dnspython==2.7.0
@@ -34,6 +35,7 @@ python-multipart==0.0.20
 pytz==2025.2
 PyYAML==6.0.2
 RapidFuzz==3.13.0
+requests==2.32.4
 rich==14.0.0
 rich-toolkit==0.14.4
 shellingham==1.5.4
@@ -46,6 +48,7 @@ typer==0.15.3
 typing-inspection==0.4.0
 typing_extensions==4.13.2
 tzdata==2025.2
+urllib3==2.5.0
 uvicorn==0.34.2
 watchfiles==1.0.5
 websockets==15.0.1
