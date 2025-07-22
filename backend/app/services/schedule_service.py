@@ -25,15 +25,16 @@ async def process_and_persist_schedules(
 ) -> dict:
     # 1) Leer los Excels
     try:
-        df_conc_raw, df_uby_raw = await handle_file_upload_generic(
+        df_conc_raw, people_obs_raw, df_uby_raw = await handle_file_upload_generic(
             files=files,
             validator=validate_excel_schedule,
             keyword_to_slot={
                 "schedule_concentrix": "schedule_concentrix",
+                "people_obs": "people_obs",
                 "schedule_ubycall":   "schedule_ubycall"
             },
-            required_slots=["schedule_concentrix", "schedule_ubycall"],
-            post_process=lambda conc, uby: (conc, uby)
+            required_slots=["schedule_concentrix", "people_obs", "schedule_ubycall"],
+            post_process=lambda conc, people, uby: (conc, people, uby)
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -80,7 +81,7 @@ async def process_and_persist_schedules(
     )
 
     # 4) Generar nuevos registros SOLO para la semana activa
-    df_conc = schedule_concentrix(df_conc_raw, week=week, year=year)
+    df_conc = schedule_concentrix(df_conc_raw, people_obs_raw, week=week, year=year)
     df_uby  = schedule_ubycall(df_uby_raw)  # si quieres análogo, haz que acepte week/year
 
     # 5) Validar cuáles documentos existen
@@ -109,6 +110,7 @@ async def process_and_persist_schedules(
             break_start=row.break_start,
             break_end=row.break_end,
             is_rest_day=bool(row.rest_day),
+            obs = row.obs,
         ))
         inserted_conc += 1
 

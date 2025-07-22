@@ -5,6 +5,7 @@ from app.utils.validators.common import validate_and_map_filename
 # Mapeo específico
 _SCHEDULE_MAPPING = {
     "schedule_concentrix": "schedule_concentrix",
+    "people_obs": "people_obs",
     "schedule_ubycall": "schedule_ubycall",
 }
 

@@ -18,3 +18,4 @@ class ScheduleRead(SQLModel):
     break_start: Optional[time]
     break_end:   Optional[time]
     is_rest_day: bool
+    obs:         Optional[str]

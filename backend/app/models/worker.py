@@ -107,6 +107,7 @@ class Schedule(SQLModel, table=True):
     break_start: Optional[time] = None
     break_end: Optional[time] = None
     is_rest_day: bool
+    obs: Optional[str] = Field(default=None, max_length=4, nullable=True)
 
     # Relación hacia Worker
     worker: Worker = Relationship(back_populates="schedules")
