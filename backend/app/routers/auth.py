@@ -40,7 +40,6 @@ async def login(credentials: Login, session: Session = Depends(get_session)):
 
 def get_whitelisted_emails():
     emails = os.getenv('WHITELISTED_EMAILS', '')
-    print(emails)
     return emails.split(',')
 
 # Ruta para registrar un nuevo usuario
@@ -50,7 +49,6 @@ def get_whitelisted_emails():
 async def register(user: UserCreate, session: Session = Depends(get_session)):
     # Obtener la lista blanca de correos electrónicos
     whitelisted_emails = get_whitelisted_emails()
-    print("Lista blanca de correos:", whitelisted_emails)
     # Verificar si el correo del usuario está en la lista blanca
     if user.username not in whitelisted_emails:
         raise HTTPException(status_code=403, detail="You are not authorized to register")

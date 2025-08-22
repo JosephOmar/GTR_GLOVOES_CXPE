@@ -16,7 +16,7 @@ app = FastAPI()
 # Configuración CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4321", "https://gtr-cx-glovo-es.netlify.app", "*"],  # Aquí coloca la URL de tu frontend (ejemplo React/Astro)
+    allow_origins=["http://localhost:4321", "https://gtr-cx-glovo-es.netlify.app", "*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

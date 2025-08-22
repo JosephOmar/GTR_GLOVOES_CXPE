@@ -19,9 +19,9 @@ COLUMNS_MASTER_GLOVO = {
 }
 
 
-def clean_master_glovo(data: pd.DataFrame, data_people: pd.DataFrame) -> pd.DataFrame:
+def clean_master_glovo(data: pd.DataFrame, people_active: pd.DataFrame, people_inactive) -> pd.DataFrame:
 
-    data_people = clean_people_consultation(data_people)
+    data_people = clean_people_consultation(people_active, people_inactive)
 
     data = data.rename(columns=COLUMNS_MASTER_GLOVO)
     # Eliminar ceros iniciales en 'DOCUMENT'
@@ -41,8 +41,7 @@ def clean_master_glovo(data: pd.DataFrame, data_people: pd.DataFrame) -> pd.Data
     data = data[data[TEAM].isin([CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS])]
     data = update_column_based_on_worker(data, data_people, SUPERVISOR, NAME)
     data = update_column_based_on_worker(data, data_people, COORDINATOR, NAME)
-    print('holi')   
-    print(data[data[TEAM] == CALL_VENDORS].head(20))
+
     data[START_DATE] = pd.to_datetime(data[START_DATE], errors='coerce')
 
     # Crear la columna 'TENURE' en meses desde la fecha de 'START_DATE'
@@ -55,5 +54,4 @@ def clean_master_glovo(data: pd.DataFrame, data_people: pd.DataFrame) -> pd.Data
     )
     data[STATUS] = data[STATUS].str.capitalize()
     data[KUSTOMER_EMAIL] = data[KUSTOMER_EMAIL].str.lower()
-    print(data[data[KUSTOMER_EMAIL] == 'lImvguby@dyglovo.com' ])
     return data

@@ -7,6 +7,7 @@ from app.core.utils.workers_cx.columns_names import (
     DAY, BREAK_START, BREAK_END, REST_DAY
 )
 
+
 def schedule_concentrix(
     data: pd.DataFrame,
     data_obs: pd.DataFrame,
@@ -15,14 +16,16 @@ def schedule_concentrix(
 ) -> pd.DataFrame:
     # Si no reciben año o semana, tomamos la actual
     data['NRO_DOCUMENTO'] = data['NRO_DOCUMENTO'].astype(str).str.lstrip("0")
-    data_obs['NRO_DOCUMENTO'] = data_obs['NRO_DOCUMENTO'].astype(str).str.lstrip("0")
+    data_obs['NRO_DOCUMENTO'] = data_obs['NRO_DOCUMENTO'].astype(
+        str).str.lstrip("0")
     today = date.today()
     year = year or today.year
     week = week or today.isocalendar()[1]
     # date.fromisocalendar(year, week, 1) devuelve el lunes de esa semana ISO
     monday = date.fromisocalendar(year, week, 1)
 
-    days = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
+    days = ['Lunes', 'Martes', 'Miercoles',
+            'Jueves', 'Viernes', 'Sabado', 'Domingo']
     idx_map = {d: i for i, d in enumerate(days)}
 
     records = []
@@ -47,15 +50,35 @@ def schedule_concentrix(
                     START_TIME: ing,
                     END_TIME: sal,
                     BREAK_START: (ref.split('-')[0].strip() if isinstance(ref, str) and '-' in ref else None),
-                    BREAK_END: (ref.split('-')[1].strip() if isinstance(ref, str) and '-' in ref else None)
+                    BREAK_END: (
+                        ref.split('-')[1].strip() if isinstance(ref, str) and '-' in ref else None)
                 }
 
-            # Agregar la columna 'obs' con la información de vacaciones
+            # Función para verificar si el valor es un horario (hora)
+            def is_time(value):
+                try:
+                    # Intentamos convertir a hora
+                    pd.to_datetime(value, format='%H:%M:%S', errors='raise')
+                    return True
+                except (ValueError, TypeError):
+                    # Si no se puede convertir, no es una hora
+                    return False
+
+            # Modificación en la sección de agregar la columna 'obs'
             obs = None
-            vac_record = data_obs[(data_obs['NRO_DOCUMENTO'] == str(doc)) & 
+            vac_record = data_obs[(data_obs['NRO_DOCUMENTO'] == str(doc)) &
                                   (data_obs[current_date.strftime('%d/%m/%Y')].notna())]
+
             if not vac_record.empty:
-                obs = vac_record[current_date.strftime('%d/%m/%Y')].values[0] if not vac_record.empty else ""
+                # Obtener el valor de la columna correspondiente
+                obs_value = vac_record[current_date.strftime(
+                    '%d/%m/%Y')].values[0]
+
+                # Si el valor no es un horario (hora), asignamos el valor a 'obs'
+                if not is_time(obs_value):
+                    obs = obs_value  # Lo dejamos tal cual si no es hora
+                else:
+                    obs = None  # Si es hora, lo omitimos
 
             # Crear el registro con la columna 'obs'
             records.append({
@@ -69,7 +92,7 @@ def schedule_concentrix(
 
     # Crear el DataFrame final
     df = pd.DataFrame(records)
-    
+
     # Convertir & truncar & asegurar time
     for col in (START_TIME, END_TIME, BREAK_START, BREAK_END):
         df[col] = (
@@ -78,5 +101,6 @@ def schedule_concentrix(
             .dt.time
         )
         df[col] = df[col].apply(lambda x: x if isinstance(x, time) else None)
-    print(df[df[DOCUMENT] == '71583160'])
-    return df[[DOCUMENT, DATE, DAY, START_TIME, END_TIME, BREAK_START, BREAK_END, REST_DAY, 'obs']]  # Devolvemos el DataFrame con la nueva columna 'obs'
+
+    # Devolvemos el DataFrame con la nueva columna 'obs'
+    return df[[DOCUMENT, DATE, DAY, START_TIME, END_TIME, BREAK_START, BREAK_END, REST_DAY, 'obs']]

@@ -6,11 +6,10 @@ import pandas as pd
 import numpy as np
 from app.core.workers_concentrix.clean_report_kustomer import clean_report_kustomer
 
-def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd.DataFrame, report_kustomer: pd.DataFrame, people_consultation: pd.DataFrame) -> pd.DataFrame:
+def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd.DataFrame, report_kustomer: pd.DataFrame, people_active: pd.DataFrame, people_inactive: pd.DataFrame) -> pd.DataFrame:
     # Concatenar ambos DataFrames
-    master_glovo = clean_master_glovo(master_glovo, people_consultation)
+    master_glovo = clean_master_glovo(master_glovo, people_active, people_inactive)
     scheduling_ubycall = clean_scheduling_ubycall(scheduling_ubycall)
-    print(master_glovo[master_glovo[KUSTOMER_EMAIL] == 'limvguby@dyglovo.com' ])
     report_kustomer = clean_report_kustomer(report_kustomer)
 
     combined_data = pd.concat([master_glovo, scheduling_ubycall])
@@ -18,11 +17,10 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
     # Eliminar duplicados basados en 'DOCUMENT', manteniendo solo el primer registro
     # En este caso, se mantiene el primer registro de 'master_data' y elimina los duplicados de 'scheduling_data'
     combined_data = combined_data.drop_duplicates(subset=[DOCUMENT], keep='first')
-    print(combined_data[combined_data[KUSTOMER_EMAIL] == 'limvguby@dyglovo.com' ])
     # Completar valores vacios
     combined_data[MANAGER] = 'Rosa Del Pilar Agurto Quispe'
     combined_data[CAMPAIGN] = 'GLOVO'
-    combined_data[ROLE] = 'AGENTE'
+    combined_data[ROLE] = 'AGENT'
     combined_data[WORK_TYPE] = 'REMOTO'
     combined_data[CONTRACT_TYPE] = 'UBYCALL'
     combined_data[TERMINATION_DATE] = np.nan

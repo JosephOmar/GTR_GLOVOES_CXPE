@@ -24,7 +24,7 @@ def schedule_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     # vectorizado + truncado al minuto
     for col in (START_TIME, END_TIME):
         data[col] = (
-            pd.to_datetime(data[col], format='%d/%m/%Y', errors='coerce')
+            pd.to_datetime(data[col], format='%H:%M:%S', errors='coerce')
               .dt.floor('min')
               .dt.time
         )
@@ -32,4 +32,5 @@ def schedule_ubycall(data: pd.DataFrame) -> pd.DataFrame:
         data[col] = data[col].apply(lambda x: x if isinstance(x, time) else None)
 
     data[DOCUMENT] = data[DOCUMENT].astype(str).str.strip()
+    print(data[[DOCUMENT, DATE, DAY, START_TIME, END_TIME]])
     return data[[DOCUMENT, DATE, DAY, START_TIME, END_TIME]]

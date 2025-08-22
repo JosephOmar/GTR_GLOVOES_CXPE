@@ -19,5 +19,4 @@ async def send_to_google_sheets(request: Request):
 
         return {"status": "ok"}
     except Exception as e:
-        print("❌ Error:", e)
         raise HTTPException(status_code=500, detail="Error al reenviar datos a Google Sheets")

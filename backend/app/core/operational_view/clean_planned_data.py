@@ -1,6 +1,10 @@
 import pandas as pd
 from datetime import datetime, timedelta
-from app.core.utils.real_data_view.columns_names import TEAM, DATE, TIME_INTERVAL, FORECAST_RECEIVED, FORECAST_AHT, FORECAST_ABSENTEEISM, REQUIRED_AGENTS, SCHEDULED_AGENTS, FORECAST_HOURS, SCHEDULED_HOURS
+from app.core.utils.real_data_view.columns_names import (
+    TEAM, DATE, TIME_INTERVAL, FORECAST_RECEIVED, FORECAST_AHT, 
+    FORECAST_ABSENTEEISM, REQUIRED_AGENTS, SCHEDULED_AGENTS, 
+    FORECAST_HOURS, SCHEDULED_HOURS
+)
 
 COLUMNS_PLANNED_DATA = {
     'CANAL': TEAM,
@@ -19,50 +23,56 @@ COLUMNS_TEAMS = {
     'PARTNERCALL': 'CALL VENDORS'
 }
 
+def normalize_time(value: str) -> str:
+    """
+    Normaliza el valor de la columna Intervalo.
+    - Si el valor es un rango 'HH:MM - HH:MM', toma la hora inicial.
+    - Si el valor incluye segundos, recorta a HH:MM.
+    - Si no se puede convertir, retorna None.
+    """
+    if pd.isnull(value):
+        return None
+    val = str(value).strip()
+    if '-' in val:
+        val = val.split('-')[0].strip()
+    try:
+        return datetime.strptime(val[:5], '%H:%M').strftime('%H:%M')
+    except Exception:
+        return None
+
 def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
+    # Renombramos columnas
     data = data.rename(columns=COLUMNS_PLANNED_DATA)
     data = data[list(COLUMNS_PLANNED_DATA.values())]
-    data = data[data[TEAM].isin(list(COLUMNS_TEAMS.keys()))]
-    # Convertimos a date
-    data[DATE] = pd.to_datetime(data[DATE]).dt.date
     
-    # Definimos rango: 2 días antes → 1 día después
+    # Filtramos por equipos
+    data = data[data[TEAM].isin(COLUMNS_TEAMS.keys())]
+    
+    # Convertimos a tipo fecha
+    data[DATE] = pd.to_datetime(data[DATE], errors='coerce').dt.date
+    
+    # Rango de fechas: 2 días antes → 1 día después
     current_day = datetime.today().date()
     start_date = current_day - timedelta(days=2)
     end_date = current_day + timedelta(days=1)
-    print('xd')
-    print(data.head(20))
-    print('xd')
-    # Filtramos por rango de fechas
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
-    print('xd')
-    print(data.head(20))
-    print('xd')
-    # Formateo de TIME_INTERVAL, incluyendo segundos
-    data[TIME_INTERVAL] = pd.to_datetime(
-        data[TIME_INTERVAL],
-        format='%H:%M',
-        errors='coerce'
-    ).dt.time
-
-    # if data[TIME_INTERVAL].isnull().all():
-    #     raise ValueError(
-    #         "La columna TIME_INTERVAL no pudo ser convertida a datetime.")
-    print('xd')
-    print(data.head(20))
-    print('xd')
-    data[TIME_INTERVAL] = data[TIME_INTERVAL].apply(
-        lambda x: x.strftime('%H:%M') if pd.notnull(x) else None
-    )
-    print('xd')
-    print(data.head(20))
-    print('xd')
-    # Reemplazo de equipos y cálculo de horas
+    
+    # Normalizamos TIME_INTERVAL
+    data[TIME_INTERVAL] = data[TIME_INTERVAL].apply(normalize_time)
+    
+    # Si después de la normalización hay valores vacíos, los llenamos con "00:00"
+    data[TIME_INTERVAL] = data[TIME_INTERVAL].fillna("00:00")
+    
+    # Reemplazo de nombres de equipos
     data[TEAM] = data[TEAM].replace(COLUMNS_TEAMS)
+    
+    # Cálculo de horas
     data[FORECAST_HOURS] = data[REQUIRED_AGENTS].round().astype(int) * 0.5
     data[SCHEDULED_HOURS] = data[SCHEDULED_AGENTS] * 0.5
-    print('xd')
-    print(data.head(20))
-    print('xd')
+    
+    # Filtramos por fecha específica (opcional)
+    data = data[data[DATE].astype(str) == '2025-07-29']
+    
+    print(data)
     return data

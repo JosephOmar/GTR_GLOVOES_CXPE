@@ -15,7 +15,6 @@ def clean_kustomer_data(
     # Asignar equipo a los parciales
     data_partial_CSAT[TEAM] = 'CHAT CUSTOMER'
     data_partial_RSAT[TEAM] = 'CHAT RIDER'
-    print(data_total_CSAT)
     # --- CSAT usando Chat + Email ---
     # Verificar si existen las columnas 'Chat' y 'Email'; si no, crearlas con ceros
     for col in ['Chat', 'Email']:

@@ -50,11 +50,10 @@ def merge_data_view(
         on=[DATE, TIME_INTERVAL, TEAM],
         how='outer'
     )
-
+    
     # --- 4) Ordenar y resetear índice ---
     df_merged = df_merged.sort_values(by=[DATE, TEAM, TIME_INTERVAL]) \
                          .reset_index(drop=True)   
-        
-    print('holi xd')
-    print(df_merged[df_merged[TIME_INTERVAL] == '06:00'].tail(15))
+    df_merged = df_merged[df_merged[DATE].astype(str) == '2025-07-29']
+    print(df_merged.tail(40))
     return df_merged

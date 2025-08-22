@@ -42,20 +42,22 @@ async def process_and_persist_workers(
         files=files,
         validator=validate_excel_workers,
         keyword_to_slot={
-            "people_consultation":"people_consultation",
+            "people_active":"people_active",
+            "people_inactive":"people_inactive",
             "scheduling_ppp":"scheduling_ppp",
             "report_kustomer":"report_kustomer",
             "master_glovo":"master_glovo",
             "scheduling_ubycall":"scheduling_ubycall",
         },
-        required_slots=["people_consultation","scheduling_ppp","report_kustomer"],
-        post_process=lambda people_consultation, scheduling_ppp, report_kustomer, **slots: pd.concat([
-            generate_worker_cx_table(people_consultation,scheduling_ppp,report_kustomer),
+        required_slots=["people_active","people_inactive","scheduling_ppp","report_kustomer"],
+        post_process=lambda people_active, people_inactive, scheduling_ppp, report_kustomer, **slots: pd.concat([
+            generate_worker_cx_table(people_active, people_inactive, scheduling_ppp,report_kustomer),
             generate_worker_uby_table(
                 slots["master_glovo"],
                 slots["scheduling_ubycall"],
                 report_kustomer,
-                people_consultation
+                people_active,
+                people_inactive,
             )
         ])
     )

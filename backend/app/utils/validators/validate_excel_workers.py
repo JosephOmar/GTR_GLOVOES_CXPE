@@ -4,7 +4,8 @@ from app.utils.validators.common import validate_and_map_filename
 
 # Mapeo específico
 _WORKERS_MAPPING = {
-    "people_consultation":      "people_consultation",
+    "people_active":      "people_active",
+    "people_inactive":      "people_inactive",
     "scheduling_ppp":       "scheduling_ppp",
     "report_kustomer":                   "report_kustomer",
     "master_glovo":            "master_glovo",
