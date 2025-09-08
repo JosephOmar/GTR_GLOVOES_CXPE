@@ -10,7 +10,7 @@ COLUMNS_PLANNED_DATA = {
     'Intervalo': INTERVAL,
     'Pronostico-Recibidas': FORECAST_RECEIVED,
     'RAC_s Planificados Logueados': REQUIRED_AGENTS,
-    'Programados sin ausentismo + Ubycall': SCHEDULED_AGENTS,
+    'Programado Logeado + Ubycall': SCHEDULED_AGENTS,
 }
 
 COLUMNS_TEAMS = {
