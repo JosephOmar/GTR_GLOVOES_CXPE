@@ -1,6 +1,7 @@
 TEAM = 'team'
 DATE = 'date'
 TIME_INTERVAL = 'time_interval'
+INTERVAL = 'interval'
 FORECAST_RECEIVED = 'forecast_received'
 FORECAST_AHT = 'forecast_aht'
 FORECAST_ABSENTEEISM = 'forecast_absenteeism'
