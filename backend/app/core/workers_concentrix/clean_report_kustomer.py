@@ -11,6 +11,9 @@ COLUMNS_REPORT = {
 }
 
 def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
+    # 0) Eliminar registros con TIME_LOGGED = 0
+    data = data[data["Total Time Logged In (ms)"] > 0].reset_index(drop=True)
+
     # 1) Prioridad por DYLAT y por tiempo (aún en ms, antes de renombrar)
     data['prioridad_dylat'] = data['Name'].str.contains(r'\(DYLAT', na=False)
     data = data.sort_values(
@@ -40,3 +43,5 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     data = data[columns_to_keep].reset_index(drop=True)
 
     return data
+
+

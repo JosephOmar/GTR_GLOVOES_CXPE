@@ -64,7 +64,7 @@ def clean_worker_name(name: str) -> str:
     name = re.sub(r'\(.*\)', '', name).strip()
 
     # 2. Separar las partes del nombre en caso de que estén en camelCase
-    name = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', name)
+    # name = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', name)
 
     # 3. Separar por espacios y capitalizar cada parte
     name_parts = name.split()
