@@ -10,6 +10,7 @@ _WORKERS_MAPPING = {
     "report_kustomer":                   "report_kustomer",
     "master_glovo":            "master_glovo",
     "scheduling_ubycall":                  "scheduling_ubycall",
+    "taking_off":                  "taking_off",
 }
 
 

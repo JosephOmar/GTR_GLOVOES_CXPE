@@ -10,7 +10,7 @@ COLUMNS_PLANNED_DATA = {
     'Intervalo': INTERVAL,
     'Pronostico-Recibidas': FORECAST_RECEIVED,
     'RAC_s Planificados Logueados': REQUIRED_AGENTS,
-    'Programado Logeado + Ubycall': SCHEDULED_AGENTS,
+    'Programado Disponible + Ubycall/ Schedule workload': SCHEDULED_AGENTS,
 }
 
 COLUMNS_TEAMS = {
@@ -64,7 +64,7 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     # Rango de fechas: dia actual → 1 día después
     current_day = datetime.today().date()
     start_date = current_day
-    end_date = current_day + timedelta(days=1)
+    end_date = current_day + timedelta(days=3)
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
 

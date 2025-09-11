@@ -48,10 +48,11 @@ async def process_and_persist_workers(
             "report_kustomer":"report_kustomer",
             "master_glovo":"master_glovo",
             "scheduling_ubycall":"scheduling_ubycall",
+            "taking_off": "taking_off"
         },
-        required_slots=["people_active","people_inactive","scheduling_ppp","report_kustomer"],
-        post_process=lambda people_active, people_inactive, scheduling_ppp, report_kustomer, **slots: pd.concat([
-            generate_worker_cx_table(people_active, people_inactive, scheduling_ppp,report_kustomer),
+        required_slots=["people_active","people_inactive","scheduling_ppp","report_kustomer","taking_off"],
+        post_process=lambda people_active, people_inactive, scheduling_ppp, report_kustomer, taking_off, **slots: pd.concat([
+            generate_worker_cx_table(people_active, people_inactive, scheduling_ppp,report_kustomer, taking_off),
             generate_worker_uby_table(
                 slots["master_glovo"],
                 slots["scheduling_ubycall"],
@@ -96,6 +97,7 @@ async def process_and_persist_workers(
             "observation_2":   row.get("observation_2"),
             "tenure":          row.get("tenure"),
             "trainee":         row.get("trainee"),
+            "qa_in_charge":    row.get("qa_in_charge"),
         }
         # 1) Hacer el SELECT para ver si existe
         stmt = select(Worker).where(Worker.document == str(row["document"]))
