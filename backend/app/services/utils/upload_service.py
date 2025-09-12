@@ -34,57 +34,7 @@ def read_file_safely(file_stream: io.BytesIO, filename: str) -> pd.DataFrame:
 
     # === Excel ===
     if filename.endswith('.xlsx'):
-        if "taking_off" in lower:
-            try:
 
-                # 1. Cargar workbook
-                wb = load_workbook(file_stream)
-
-                # 2. Eliminar las 2 primeras filas en todas las hojas
-                for hoja in wb.sheetnames:
-                    ws = wb[hoja]
-                    ws.delete_rows(1, 2)
-
-                # 3. Guardar en nuevo stream
-                new_stream = io.BytesIO()
-                wb.save(new_stream)
-                new_stream.seek(0)
-
-                # 4. Leer con pandas SIN header/skiprows (ya no hacen falta)
-                all_sheets = pd.read_excel(
-                    new_stream,
-                    sheet_name=None,
-                    engine="openpyxl"
-                )
-
-                dfs = []
-                for sheet_name, df in all_sheets.items():
-                    # Normalizar columnas actuales
-                    normalized_cols = {
-                        c: str(c).strip().lower().replace(
-                            " ", "_").replace(".", "_")
-                        for c in df.columns
-                    }
-                    df = df.rename(columns=normalized_cols)
-                    if "usuario" in df.columns and "qa_encargado" in df.columns:
-                        # limpiar columna usuario
-                        df["usuario"] = df["usuario"].astype(str).str.strip()
-                        
-                        tmp = df[["usuario", "qa_encargado"]].copy()
-                        tmp["requirement_id"] = sheet_name
-                        dfs.append(tmp)
-                    else:
-                        print(
-                            f"⚠️ Hoja '{sheet_name}' no tiene columnas 'usuario' y 'qa_encargado'")
-
-                if not dfs:
-                    raise ValueError(
-                        "Ninguna hoja contiene las columnas 'usuario' y 'qa_encargado'.")
-                return pd.concat(dfs, ignore_index=True)
-
-            except Exception as e:
-                raise ValueError(
-                    f"Error leyendo Excel '{filename}' con varias hojas: {e}")
         # 2) Buscar la primera keyword en el nombre
         for kw, params in EXCEL_READ_CONFIGS.items():
             if kw in lower:

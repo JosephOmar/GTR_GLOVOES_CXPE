@@ -3,7 +3,7 @@ from app.core.utils.workers_cx.utils import fuzzy_match
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.workers_concentrix.clean_scheduling_ppp import clean_scheduling_ppp
 from app.core.workers_concentrix.clean_report_kustomer import clean_report_kustomer
-from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL
+from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID
 import numpy as np
 
 # Función para combinar los DataFrames basados en la columna 'DOCUMENT'
@@ -72,33 +72,47 @@ def merge_by_similar_name(df1: pd.DataFrame, df2: pd.DataFrame, column1: str, co
 
 def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataFrame) -> pd.DataFrame:
     """
-    Une df_final_worker con el DataFrame de 'despegando'.
-    Empareja df_final_worker.KUSTOMER_EMAIL con df_despegando.usuario.
+    Une df_final_worker con el DataFrame de 'despegando' solo para filas con trainee == 'DESPEGANDO'.
+    Empareja df_final_worker.DOCUMENT con df_despegando.document.
     Si no hay coincidencia, las columnas de despegando quedan vacías.
-    Si requirement_id ya existe en df_final_worker, se reemplaza por el de df_despegando cuando exista.
+    requirement_id y supervisor se reemplazan por los valores de despegando cuando existen.
     """
+
     # Normalizamos nombres de columnas en despegando
     df_despegando = df_despegando.rename(columns={c: str(c).strip().lower() for c in df_despegando.columns})
     df_despegando = df_despegando.rename(columns={
-        "usuario": KUSTOMER_EMAIL,
-        "qa_encargado": "qa_in_charge",
-        "requirement_id": "requirement_id_despegando",  # evitamos choque en el merge
+        "document": DOCUMENT,
+        "supervisor": "supervisor_despegando",
+        "requirement_id": "requirement_id_despegando",
     })
 
-    # merge
+    # Dividimos en dos: los que son DESPEGANDO y los demás
+    df_despegando_mask = df_final_worker["trainee"].str.upper() == "DESPEGANDO"
+    df_despegando_part = df_final_worker[df_despegando_mask].copy()
+    df_normal_part = df_final_worker[~df_despegando_mask].copy()
+
+    # Merge solo para los DESPEGANDO
     merged = pd.merge(
-        df_final_worker,
+        df_despegando_part,
         df_despegando,
-        on=KUSTOMER_EMAIL,
+        on=DOCUMENT,
         how="left"
     )
 
-    # Si requirement_id existe en df_final_worker, lo sobreescribimos con el de despegando (cuando no es nulo)
-    if "requirement_id" in merged.columns and "requirement_id_despegando" in merged.columns:
+    # Reemplazo de supervisor y requirement_id si existen valores en despegando
+    if "requirement_id_despegando" in merged.columns:
         merged["requirement_id"] = merged["requirement_id_despegando"].combine_first(merged["requirement_id"])
         merged = merged.drop(columns=["requirement_id_despegando"])
 
-    return merged
+    if "supervisor_despegando" in merged.columns:
+        merged["supervisor"] = merged["supervisor_despegando"].combine_first(merged["supervisor"])
+        merged = merged.drop(columns=["supervisor_despegando"])
+
+    # Reconstruimos todo el dataframe
+    result = pd.concat([merged, df_normal_part], ignore_index=True)
+
+    return result
+
 
 def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.DataFrame, scheduling_ppp: pd.DataFrame, report_kustomer: pd.DataFrame, despegando: pd.DataFrame) -> pd.DataFrame:
 
