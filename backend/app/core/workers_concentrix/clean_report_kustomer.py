@@ -11,6 +11,12 @@ COLUMNS_REPORT = {
 }
 
 def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
+    # 🔹 Filtro: eliminar emails con @dyglovo y TIME_LOGGED = 0
+    data = data[~(
+        data["User Email"].str.contains(r'@dyglovo', na=False) &
+        (data["Total Time Logged In (ms)"] == 0)
+    )]
+
     # 0) Crear prioridades en lugar de eliminar
     data['prioridad_dylat'] = data['Name'].str.contains(r'\(DYLAT', na=False)
     data['prioridad_time'] = data["Total Time Logged In (ms)"] > 0
@@ -20,7 +26,6 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     data = data.sort_values(
         by=['prioridad_dylat', 'prioridad_time', 'prioridad_email', 'Total Time Logged In (ms)'],
         ascending=[False, False, True, False]  
-        # Nota: True en prioridad_email porque queremos que @service.glovoapp.com vaya al final
     ).reset_index(drop=True)
 
     # 2) Renombrar
@@ -45,3 +50,4 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     data = data[columns_to_keep].reset_index(drop=True)
 
     return data
+
