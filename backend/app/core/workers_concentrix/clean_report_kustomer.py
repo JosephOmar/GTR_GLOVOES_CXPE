@@ -11,14 +11,16 @@ COLUMNS_REPORT = {
 }
 
 def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
-    # 0) Eliminar registros con TIME_LOGGED = 0
-    data = data[data["Total Time Logged In (ms)"] > 0].reset_index(drop=True)
-
-    # 1) Prioridad por DYLAT y por tiempo (aún en ms, antes de renombrar)
+    # 0) Crear prioridades en lugar de eliminar
     data['prioridad_dylat'] = data['Name'].str.contains(r'\(DYLAT', na=False)
+    data['prioridad_time'] = data["Total Time Logged In (ms)"] > 0
+    data['prioridad_email'] = data["User Email"].str.contains(r'@service\.glovoapp\.com', na=False)
+
+    # 1) Ordenar por prioridades
     data = data.sort_values(
-        by=['prioridad_dylat', 'Total Time Logged In (ms)'],
-        ascending=[False, False]
+        by=['prioridad_dylat', 'prioridad_time', 'prioridad_email', 'Total Time Logged In (ms)'],
+        ascending=[False, False, True, False]  
+        # Nota: True en prioridad_email porque queremos que @service.glovoapp.com vaya al final
     ).reset_index(drop=True)
 
     # 2) Renombrar
@@ -43,5 +45,3 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     data = data[columns_to_keep].reset_index(drop=True)
 
     return data
-
-
