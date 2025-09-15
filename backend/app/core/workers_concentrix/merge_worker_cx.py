@@ -41,7 +41,7 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
 
 
 
-def merge_by_similar_name(df1: pd.DataFrame, df2: pd.DataFrame, column1: str, column2: str, threshold=95, fallback_threshold=75):
+def merge_by_similar_name(df1: pd.DataFrame, df2: pd.DataFrame, column1: str, column2: str, threshold=95, fallback_threshold=60):
     """
     Realiza un merge entre dos DataFrames usando fuzzy matching en los nombres utilizando rapidfuzz.
     """

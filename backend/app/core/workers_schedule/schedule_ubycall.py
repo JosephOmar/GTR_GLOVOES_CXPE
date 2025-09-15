@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import time
 from app.core.utils.workers_cx.columns_names import DOCUMENT, DATE, START_TIME, END_TIME, DAY
 
+
 SCHEDULE_UBYCALL_COLUMNS = {
     'DNI':        DOCUMENT,
     'FECHA':      DATE,

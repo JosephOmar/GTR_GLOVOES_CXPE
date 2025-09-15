@@ -48,6 +48,6 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     # 7) Seleccionar columnas finales
     columns_to_keep = [KUSTOMER_NAME, TIME_LOGGED, KUSTOMER_ID, KUSTOMER_EMAIL, RECENT_LOGIN, DATE_LOGIN]
     data = data[columns_to_keep].reset_index(drop=True)
-
+    print(data[data[KUSTOMER_NAME] == 'Victor Rafael Otoya Triay'])
     return data
 

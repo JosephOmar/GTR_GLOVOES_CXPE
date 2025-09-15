@@ -12,7 +12,7 @@ COLUMNS_MASTER_GLOVO = {
     "NOMBRE": NAME,
     "ESTADO": STATUS,
     "FECHA DE ALTA": START_DATE,
-    "Usuario Kustomer": KUSTOMER_EMAIL,
+    # "Usuario Kustomer": KUSTOMER_EMAIL,
     "SUPERVISOR": SUPERVISOR,
     "RESPONSABLE": COORDINATOR,
     "CANALES GLOVO": TEAM
@@ -53,5 +53,5 @@ def clean_master_glovo(data: pd.DataFrame, people_active: pd.DataFrame, people_i
         (current_date.year - x.year) * 12 + current_date.month - x.month
     )
     data[STATUS] = data[STATUS].str.capitalize()
-    data[KUSTOMER_EMAIL] = data[KUSTOMER_EMAIL].str.lower()
+    # data[KUSTOMER_EMAIL] = data[KUSTOMER_EMAIL].str.lower()
     return data
