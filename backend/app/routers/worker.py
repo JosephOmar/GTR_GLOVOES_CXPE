@@ -32,7 +32,6 @@ async def upload_workers(
 def read_workers(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # Cargamos role, status, campaign, etc. y además schedules y ubycall_schedules
     #current_day = date.today()
-
     statement = (
         select(Worker)
         .options(

@@ -123,18 +123,14 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
     df_people_and_ppp = merge_worker_data(df_people_consultation, df_scheduling_ppp)
 
     df_people_and_ppp['team'] = df_people_and_ppp['team'].replace({
-       'CHAT USER' : 'CHAT CUSTOMER',
-       'MAIL USER' : 'MAIL CUSTOMER',
-       'CHAT GLOVER' : 'CHAT RIDER',
-       'MAIL GLOVER': 'MAIL RIDER',
-       'PARTNER CALL': 'CALL VENDOR',
-       'MAIL PARTNER': 'MAIL VENDOR',
-       'MIGRADOS CUSTOMER' : 'CHAT CUSTOMER HC',
-       'MIGRADOS RIDER' : 'CHAT RIDER HC',
-       'MIGRADOS VENDOR' : 'CALL VENDOR HC',
-       'RUBIK CUSTOMER' : 'RUBIK CUSTOMER',
-       'RUBIK RIDER' : 'RUBIK RIDER',
-       'RUBIK VENDOR' : 'RUBIK VENDOR',
+       'CUSTOMER TIER1' : 'CUSTOMER TIER 1',
+       'RIDER TIER1' : 'RIDER TIER 1',
+       'VENDOR TIER1' : 'VENDOR CALL',
+       'CUSTOMER TIER2': 'CUSTOMER TIER 2',
+       'RIDER TIER2': 'RIDER TIER 2',
+       'VENDOR TIER2': 'VENDOR MAIL',
+       'MIGRADOS VENDOR' : 'VENDOR TIER 1',
+       'RUBIK VENDOR' : 'VENDOR TIER 2',
     })
 
     df_final_worker = merge_by_similar_name(df_people_and_ppp, df_report_kustomer, NAME, KUSTOMER_NAME)

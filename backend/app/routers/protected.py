@@ -15,11 +15,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     payload = verify_token(token)
     if payload is None:
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = session.query(User).filter(User.username == payload["sub"]).first()
+    user = session.query(User).filter(User.id == payload["sub"]).first()
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 
 @router.get("/protected-endpoint")
 async def protected_endpoint(current_user: User = Depends(get_current_user)):
-    return {"message": f"Hello {current_user.username}, you are authenticated!"}
+    return {"message": f"Hello {current_user.name}, you are authenticated!"}

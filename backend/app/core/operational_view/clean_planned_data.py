@@ -73,6 +73,5 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     
     # Filtramos por fecha específica (opcional)
     data = data[data[DATE].astype(str) == '2025-07-29']
-    
-    print(data)
+
     return data

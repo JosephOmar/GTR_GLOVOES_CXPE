@@ -3,12 +3,16 @@
 from pydantic import BaseModel
 
 class UserCreate(BaseModel):
-    username: str
+    name: str
+    lastname: str
+    email: str
     password: str
 
 class UserRead(BaseModel):
     id: int
-    username: str
+    name: str
+    lastname: str
+    email: str
 
     class Config:
         orm_mode = True

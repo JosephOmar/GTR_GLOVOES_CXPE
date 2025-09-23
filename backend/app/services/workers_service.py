@@ -97,7 +97,6 @@ async def process_and_persist_workers(
             "observation_2":   row.get("observation_2"),
             "tenure":          row.get("tenure"),
             "trainee":         row.get("trainee"),
-            "training_support":row.get("training_support"),
         }
         # 1) Hacer el SELECT para ver si existe
         stmt = select(Worker).where(Worker.document == str(row["document"]))

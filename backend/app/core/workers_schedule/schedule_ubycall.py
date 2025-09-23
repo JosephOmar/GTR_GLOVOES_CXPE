@@ -33,5 +33,5 @@ def schedule_ubycall(data: pd.DataFrame) -> pd.DataFrame:
         data[col] = data[col].apply(lambda x: x if isinstance(x, time) else None)
 
     data[DOCUMENT] = data[DOCUMENT].astype(str).str.strip()
-    print(data[[DOCUMENT, DATE, DAY, START_TIME, END_TIME]])
+
     return data[[DOCUMENT, DATE, DAY, START_TIME, END_TIME]]

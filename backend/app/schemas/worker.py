@@ -45,7 +45,6 @@ class WorkerRead(SQLModel):
     observation_2: Optional[str]
     tenure: Optional[int]
     trainee: Optional[str]
-    training_support: Optional[str]
 
     # aquí los horarios anidados
     schedules:           List[ScheduleRead]          = []

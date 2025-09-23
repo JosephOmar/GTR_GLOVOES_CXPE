@@ -55,5 +55,5 @@ def merge_data_view(
     df_merged = df_merged.sort_values(by=[DATE, TEAM, TIME_INTERVAL]) \
                          .reset_index(drop=True)   
     df_merged = df_merged[df_merged[DATE].astype(str) == '2025-07-29']
-    print(df_merged.tail(40))
+
     return df_merged

@@ -13,19 +13,17 @@ COLUMNS_REPORT = {
 def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     # 🔹 Filtro: eliminar emails con @dyglovo y TIME_LOGGED = 0
     data = data[~(
-        data["User Email"].str.contains(r'@dyglovo', na=False) &
-        (data["Total Time Logged In (ms)"] == 0)
+        data["User Email"].str.contains(r'@dyglovo', na=False)
     )]
 
     # 0) Crear prioridades en lugar de eliminar
     data['prioridad_dylat'] = data['Name'].str.contains(r'\(DYLAT', na=False)
-    data['prioridad_time'] = data["Total Time Logged In (ms)"] > 0
-    data['prioridad_email'] = data["User Email"].str.contains(r'@service\.glovoapp\.com', na=False)
+    data['prioridad_email'] = data["User Email"].str.contains(r'@providers\.glovoapp\.com', na=False)
 
     # 1) Ordenar por prioridades
     data = data.sort_values(
-        by=['prioridad_dylat', 'prioridad_time', 'prioridad_email', 'Total Time Logged In (ms)'],
-        ascending=[False, False, True, False]  
+        by=['prioridad_dylat', 'prioridad_email'],
+        ascending=[False, False]  
     ).reset_index(drop=True)
 
     # 2) Renombrar
@@ -48,6 +46,5 @@ def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
     # 7) Seleccionar columnas finales
     columns_to_keep = [KUSTOMER_NAME, TIME_LOGGED, KUSTOMER_ID, KUSTOMER_EMAIL, RECENT_LOGIN, DATE_LOGIN]
     data = data[columns_to_keep].reset_index(drop=True)
-    print(data[data[KUSTOMER_NAME] == 'Victor Rafael Otoya Triay'])
     return data
 

@@ -14,12 +14,15 @@ COLUMNS_PLANNED_DATA = {
 }
 
 COLUMNS_TEAMS = {
-    'CHAT GLOVER': 'CHAT RIDER HC',
-    'CHAT USER': 'CHAT CUSTOMER HC',
-    'PARTNERCALL': 'CALL VENDOR HC',
-    'MAIL USER': 'RUBIK CUSTOMER',
-    'MAIL GLOVER': 'RUBIK RIDER',
-    'MAIL PARTNER' : 'RUBIK VENDOR'
+    'CUSTOMER TIER1': 'CUSTOMER TIER 1',
+    'CUSTOMER TIER2': 'CUSTOMER TIER 2',
+    'RIDER TIER1': 'RIDER TIER 1',
+    'RIDER TIER2': 'RIDER TIER 2',
+    'VENDOR TIER1': 'VENDOR CALL',
+    'VENDOR TIER2': 'VENDOR MAIL',
+    'PARTNERCALL': 'VENDOR TIER 1',
+    'MAIL PARTNER': 'VENDOR TIER 2',
+
 }
 
 def normalize_time(value: str) -> str:
@@ -68,7 +71,6 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
 
-    print(data)
     # Normalizamos TIME_INTERVAL
     data[INTERVAL] = data[INTERVAL].apply(normalize_time)
 
@@ -89,7 +91,5 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
         data.groupby([TEAM, DATE, INTERVAL], as_index=False)
             .agg(agg_funcs)
     )
-
-    print(data[data[TEAM] == 'CHAT CUSTOMER HC'].head(30))
 
     return data

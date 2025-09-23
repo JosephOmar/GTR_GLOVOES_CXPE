@@ -17,7 +17,7 @@ router = APIRouter()
 load_dotenv()
 
 class Login(BaseModel):
-    username: str
+    email: str
     password: str
 
 
@@ -25,12 +25,12 @@ class Login(BaseModel):
 async def login(credentials: Login, session: Session = Depends(get_session)):
     # Buscamos al usuario por nombre de usuario
     user = session.query(User).filter(
-        User.username == credentials.username).first()
+        User.email == credentials.email).first()
 
     # Verificamos si la contraseña es correcta
-    if user and verify_password(credentials.password, user.hashed_password):
+    if user and verify_password(credentials.password, user.password):
         # Generamos el token JWT
-        token = create_access_token({"sub": user.username})
+        token = create_access_token({"sub": str(user.id)})
         return {"access_token": token, "token_type": "bearer"}
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -50,19 +50,19 @@ async def register(user: UserCreate, session: Session = Depends(get_session)):
     # Obtener la lista blanca de correos electrónicos
     whitelisted_emails = get_whitelisted_emails()
     # Verificar si el correo del usuario está en la lista blanca
-    if user.username not in whitelisted_emails:
+    if user.email not in whitelisted_emails:
         raise HTTPException(status_code=403, detail="You are not authorized to register")
     
     # Comprobar si el usuario ya existe en la base de datos
-    db_user = session.query(User).filter(User.username == user.username).first()
+    db_user = session.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
 
     # Encriptar la contraseña del usuario
-    hashed_password = hash_password(user.password)
+    password = hash_password(user.password)
 
     # Crear el nuevo usuario con el nombre de usuario y la contraseña encriptada
-    new_user = User(username=user.username, hashed_password=hashed_password)
+    new_user = User(name=user.name, lastname=user.lastname ,email=user.email, password=password)
 
     # Guardar el nuevo usuario en la base de datos
     session.add(new_user)
