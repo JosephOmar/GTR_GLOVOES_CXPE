@@ -37,8 +37,8 @@ def clean_master_glovo(data: pd.DataFrame, people_active: pd.DataFrame, people_i
 
     # Reemplazar valores en 'TEAM'
     data[TEAM] = data[TEAM].replace(
-        {'Ubycall Chat User': CHAT_CUSTOMER, 'Ubycall Chat Glover': CHAT_RIDER, 'Ubycall Partnercall Es': CALL_VENDORS})
-    data = data[data[TEAM].isin([CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS])]
+        {'Ubycall Chat User': CHAT_CUSTOMER, 'Ubycall Chat Glover': CHAT_RIDER, 'Ubycall Partnercall Es': 'VENDOR CALL'})
+    data = data[data[TEAM].isin([CHAT_CUSTOMER, CHAT_RIDER, 'VENDOR CALL'])]
     data = update_column_based_on_worker(data, data_people, SUPERVISOR, NAME)
     data = update_column_based_on_worker(data, data_people, COORDINATOR, NAME)
 

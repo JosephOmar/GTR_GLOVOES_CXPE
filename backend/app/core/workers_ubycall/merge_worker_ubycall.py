@@ -11,7 +11,12 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
     # Concatenar ambos DataFrames
     master_glovo = clean_master_glovo(master_glovo, people_active, people_inactive)
     scheduling_ubycall = clean_scheduling_ubycall(scheduling_ubycall)
-    report_kustomer = clean_report_kustomer(report_kustomer)
+    #df_report_kustomer = clean_report_kustomer(report_kustomer)
+    report_kustomer = report_kustomer.rename(columns={
+        'DOCUMENT': DOCUMENT,
+        'API EMAIL': KUSTOMER_EMAIL,
+        'API ID': KUSTOMER_ID
+    })
 
     combined_data = pd.concat([master_glovo, scheduling_ubycall])
     
@@ -30,6 +35,13 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
     combined_data[OBSERVATION_1] = np.nan
     combined_data[OBSERVATION_2] = np.nan
 
-    final_data = merge_by_similar_name(combined_data, report_kustomer, NAME, KUSTOMER_NAME)
-    
+    #final_data = merge_by_similar_name(combined_data, report_kustomer, NAME, KUSTOMER_NAME)
+
+    final_data = pd.merge(
+        combined_data,
+        report_kustomer,
+        on=DOCUMENT,
+        how="left"
+    )
+    print(final_data['team'])
     return final_data

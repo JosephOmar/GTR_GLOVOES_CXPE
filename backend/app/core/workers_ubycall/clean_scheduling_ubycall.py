@@ -28,12 +28,12 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
 
     # Paso 3: Reemplazar los valores en la columna 'CAMPANA' (TEAM)
     data[TEAM] = data[TEAM].replace({
-        'GLOVO -  GLOVER ESPANA': CHAT_RIDER,
-        'GLOVO -  USER ESPANA': CHAT_CUSTOMER,
-        'GLOVO - USER TIER C': CHAT_CUSTOMER,
-        'GLOVO - PARTNER SERVICES': CALL_VENDORS
+        'GLOVO -  GLOVER ESPANA': 'RIDER TIER 1',
+        'GLOVO -  USER ESPANA': 'CUSTOMER TIER 1',
+        'GLOVO - USER TIER C': 'CUSTOMER TIER 1',
+        'GLOVO - PARTNER SERVICES': 'VENDOR CALL'
     })
-    data = data[data[TEAM].isin([CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS])]
+    data = data[data[TEAM].isin(['CUSTOMER TIER 1', 'RIDER TIER 1', 'VENDOR CALL'])]
 
     # Paso 4: Transformar 'START_DATE' de formato 'YYYYMMDD' a datetime
     data[START_DATE] = pd.to_datetime(data[START_DATE], format='%Y%m%d')
@@ -41,7 +41,7 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     # Paso 5: Calcular la antigüedad en meses (TENURE)
     # Fecha actual
     current_date = datetime.now()
-
+    print(data)
     # Calcular la antigüedad en meses
     data[TENURE] = data[START_DATE].apply(
         lambda x: 0 if (current_date.year == x.year and current_date.month == x.month) or
