@@ -86,14 +86,14 @@ def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataF
         "requirement_id": "requirement_id_despegando",
     })
 
-    # Dividimos en dos: los que son DESPEGANDO y los demás
-    df_despegando_mask = df_final_worker["trainee"].str.upper() == "DESPEGANDO"
-    df_despegando_part = df_final_worker[df_despegando_mask].copy()
-    df_normal_part = df_final_worker[~df_despegando_mask].copy()
+    # # Dividimos en dos: los que son DESPEGANDO y los demás
+    # df_despegando_mask = df_final_worker["trainee"].str.upper() == "DESPEGANDO"
+    # df_despegando_part = df_final_worker[df_despegando_mask].copy()
+    # df_normal_part = df_final_worker[~df_despegando_mask].copy()
 
     # Merge solo para los DESPEGANDO
     merged = pd.merge(
-        df_despegando_part,
+        df_final_worker,
         df_despegando,
         on=DOCUMENT,
         how="left"
@@ -109,9 +109,9 @@ def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataF
         merged = merged.drop(columns=["supervisor_despegando"])
 
     # Reconstruimos todo el dataframe
-    result = pd.concat([merged, df_normal_part], ignore_index=True)
+    # result = pd.concat([merged, df_normal_part], ignore_index=True)
 
-    return result
+    return merged
 
 
 
