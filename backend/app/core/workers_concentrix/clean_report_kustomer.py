@@ -7,7 +7,7 @@ COLUMNS_REPORT = {
     "Total Time Logged In (ms)": TIME_LOGGED,
     "User ID": KUSTOMER_ID,
     "User Email": KUSTOMER_EMAIL,
-    "Most Recent Login": RECENT_LOGIN
+    "Most Recent Login": RECENT_LOGIN,
 }
 
 def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:

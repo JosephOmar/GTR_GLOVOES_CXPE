@@ -3,7 +3,7 @@ from app.core.utils.workers_cx.utils import fuzzy_match
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.workers_concentrix.clean_scheduling_ppp import clean_scheduling_ppp
 from app.core.workers_concentrix.clean_report_kustomer import clean_report_kustomer
-from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, KUSTOMER_ID
+from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, KUSTOMER_ID, TEAM
 import numpy as np
 
 # Función para combinar los DataFrames basados en la columna 'DOCUMENT'
@@ -14,6 +14,8 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
     rellenando observaciones y eligiendo TEAM de df_scheduling_ppp
     por encima del de df_people_consultation cuando exista.
     """
+    print(df_people_consultation.columns.to_list())
+    print(df_scheduling_ppp.columns.to_list())
     # Usamos suffixes para distinguir claramente las dos columnas 'team'
     merged = pd.merge(
         df_people_consultation,
@@ -22,6 +24,7 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
         how='left',
         suffixes=('_people', '_scheduling')
     )   
+    print(merged.columns.to_list())
 
     # Rellenar observaciones vacías
     merged['observation_1'] = merged['observation_1'].fillna('')
@@ -29,17 +32,19 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
 
     # Convertimos cadenas vacías en NaN para que combine correctamente
     merged['team_scheduling'] = merged['team_scheduling'].replace('', np.nan)
+    merged['supervisor_scheduling'] = merged['supervisor_scheduling'].replace('', np.nan)
+    merged['requirement_id_scheduling'] = merged['requirement_id_scheduling'].replace('', np.nan)
 
     # Creamos la columna final 'team': si team_scheduling existe, lo usamos;
     # si no, tomamos team_people
-    merged['team'] = merged['team_scheduling'].fillna(merged['team_people'])
+    merged[TEAM] = merged['team_scheduling'].fillna(merged['team_people'])
+    merged[SUPERVISOR] = merged['supervisor_scheduling'].fillna(merged['supervisor_people'])
+    merged[REQUIREMENT_ID] = merged['requirement_id_scheduling'].fillna(merged['requirement_id_people'])
 
     # Eliminamos las columnas intermedias
-    merged = merged.drop(columns=['team_people', 'team_scheduling'])
+    merged = merged.drop(columns=['team_people', 'team_scheduling','supervisor_people', 'supervisor_scheduling','requirement_id_people', 'requirement_id_scheduling'])
 
     return merged
-
-
 
 def merge_by_similar_name(df1: pd.DataFrame, df2: pd.DataFrame, column1: str, column2: str, threshold=95, fallback_threshold=60):
     """
@@ -123,7 +128,7 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
     #df_report_kustomer = clean_report_kustomer(report_kustomer)
     report_kustomer = report_kustomer.rename(columns={
         'DOCUMENT': DOCUMENT,
-        'API EMAIL': KUSTOMER_EMAIL,
+        # 'API EMAIL': KUSTOMER_EMAIL,
         'API ID': KUSTOMER_ID
     })
 
@@ -149,7 +154,7 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
         how="left"
     )
 
-    if despegando is not None:
-        df_final_worker = merge_with_despegando(df_final_worker, despegando)
+    # if despegando is not None:
+    #     df_final_worker = merge_with_despegando(df_final_worker, despegando)
 
     return df_final_worker
