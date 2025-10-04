@@ -52,13 +52,13 @@ async def process_and_persist_attendance(
     missing_workers = []
 
     # 5) Iterar sobre los registros limpios
-    # Iterar sobre todos los trabajadores
     for row in df_attendance.itertuples(index=False):
         kustomer_email = str(row._asdict()["kustomer_email"]).strip()
         check_in = row._asdict()["check_in"]
         check_out = row._asdict()["check_out"]
         date_row = row._asdict()["date"]
 
+        # Buscar worker por email
         worker = session.exec(
             select(Worker).where(Worker.kustomer_email == kustomer_email)
         ).first()
@@ -67,6 +67,7 @@ async def process_and_persist_attendance(
             missing_workers.append(kustomer_email)
             continue
 
+        # Buscar schedule para ese worker en la fecha
         schedule = session.exec(
             select(Schedule).where(
                 and_(
@@ -76,30 +77,30 @@ async def process_and_persist_attendance(
             )
         ).first()
 
-        # Por defecto = Absent
+        # Status por defecto = Absent
         status = "Absent"
 
-        if schedule:
+        if schedule and schedule.start_time:
             if check_in:
                 tolerance_time = (datetime.combine(date_row, schedule.start_time) + timedelta(minutes=5)).time()
                 if check_in <= tolerance_time:
                     status = "Present"
                 else:
                     status = "Late"
-            else:
-                # Si hay schedule pero no check_in → sigue siendo Absent
-                status = "Absent"
+        else:
+            # Si no hay schedule o start_time, lo dejamos como Absent
+            status = "Absent"
 
-            # Guardar registro aunque no haya check_in
-            attendance = Attendance(
-                kustomer_email=worker.kustomer_email,
-                date=date_row,
-                check_in=check_in,
-                check_out=check_out,
-                status=status,
-            )
-            session.add(attendance)
-            inserted += 1
+        # Crear registro de asistencia
+        attendance = Attendance(
+            kustomer_email=worker.kustomer_email,
+            date=date_row,
+            check_in=check_in,
+            check_out=check_out,
+            status=status,
+        )
+        session.add(attendance)
+        inserted += 1
 
     session.commit()
 
