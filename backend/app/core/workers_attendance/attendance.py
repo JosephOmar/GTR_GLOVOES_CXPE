@@ -27,6 +27,7 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
         # Filtrar ONLINE y AVAILABLE
         online = group[
             (group["State"].str.upper() == "ONLINE") |
+            (group["State"].str.upper() == "ASSIGNED TASK") |
             (group["State"].str.upper().str.contains("AVAILABLE", regex=False))
         ]
         offline = group[group["State"].str.upper() == "OFFLINE"]

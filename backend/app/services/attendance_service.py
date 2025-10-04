@@ -78,6 +78,12 @@ async def process_and_persist_attendance(
             )
         ).first()
 
+        print(f"Worker: {worker.kustomer_email}")
+        print(f"Date row: {date_row} ({type(date_row)})")
+        print(f"Schedule found: {schedule}")
+        if schedule:
+            print(f"Schedule start: {schedule.start_time} ({type(schedule.start_time)})")
+
         # Status por defecto = Absent
         status = "Absent"
 
