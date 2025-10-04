@@ -41,7 +41,7 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     # Paso 5: Calcular la antigüedad en meses (TENURE)
     # Fecha actual
     current_date = datetime.now()
-    print(data)
+
     # Calcular la antigüedad en meses
     data[TENURE] = data[START_DATE].apply(
         lambda x: 0 if (current_date.year == x.year and current_date.month == x.month) or

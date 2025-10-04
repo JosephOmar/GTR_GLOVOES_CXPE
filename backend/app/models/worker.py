@@ -86,6 +86,8 @@ class Worker(SQLModel, table=True):
 
     ubycall_schedules: List["UbycallSchedule"] = Relationship(back_populates="worker", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
+    attendances: List["Attendance"] = Relationship(back_populates="worker")
+
 class UbycallSchedule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     worker_document: str = Field(foreign_key="worker.document")
@@ -112,16 +114,24 @@ class Schedule(SQLModel, table=True):
     # Relación hacia Worker
     worker: Worker = Relationship(back_populates="schedules")
 
-class Absence(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    worker_kustomer_id: int = Field(foreign_key="worker.kustomer_id")
-    date: date
-    login_time: Optional[datetime.date] = Field(default=None)
-
 class Attendance(SQLModel, table=True):
+    """
+    Registro real de asistencia del trabajador:
+    - Marca de entrada y salida.
+    - Si asistió o no al turno planificado.
+    - Observaciones de puntualidad, faltas, etc.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
-    worker_kustomer_id: int = Field(foreign_key="worker.kustomer_id")
+    kustomer_email: str = Field(foreign_key="worker.kustomer_email")
+
     date: date
-    login_time: Optional[datetime.date] = Field(default=None)
-    connection_time: Optional[str] = Field(default=None, max_length=40) 
+    check_in: Optional[time] = None
+    check_out: Optional[time] = None
+    status: str = Field(default="absent")  
+    # Ej: "present", "absent", "late", "early_leave"
+
+    notes: Optional[str] = Field(default=None, max_length=255, nullable=True)
+
+    # Relación con Worker
+    worker: Worker = Relationship(back_populates="attendances")
 

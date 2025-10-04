@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import date
+from datetime import date, time
 from sqlmodel import SQLModel
 from app.schemas.schedule import ScheduleRead, UbycallScheduleRead
 
@@ -21,6 +21,19 @@ class WorkTypeRead(SQLModel):
 class ContractTypeRead(SQLModel):
     name: str
 
+class AttendanceRead(SQLModel):
+    id: int
+    kustomer_email: str
+    date: date
+    check_in: Optional[time]
+    check_out: Optional[time]
+    status: str
+    notes: Optional[str] = None
+
+
+# ----------------------
+# Worker schema principal
+# ----------------------
 class WorkerRead(SQLModel):
     document: str
     name: str
@@ -46,6 +59,7 @@ class WorkerRead(SQLModel):
     tenure: Optional[int]
     trainee: Optional[str]
 
-    # aquí los horarios anidados
-    schedules:           List[ScheduleRead]          = []
-    ubycall_schedules:   List[UbycallScheduleRead]   = []
+    # Relaciones anidadas
+    schedules:         List[ScheduleRead]        = []
+    ubycall_schedules: List[UbycallScheduleRead] = []
+    attendances:       List[AttendanceRead]      = []

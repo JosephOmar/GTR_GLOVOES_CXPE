@@ -1,50 +1,50 @@
 import pandas as pd
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
-from core.utils.attendance.columns_names import RECENT_LOGIN, KUSTOMER_ID, MESSAGES_SENT, TOTAL_TIME
+from datetime import time
 
-ATTENDANCE_COLUMNS = {
-    'Most Recent Login' : RECENT_LOGIN,
-    'User ID' : KUSTOMER_ID,
-    'Messages Sent' : MESSAGES_SENT,
-    'Total Time Logged In': TOTAL_TIME
-}
+def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None) -> pd.DataFrame:
+    # Renombrar columnas
+    data = data.rename(columns={
+        'Agent Email' : 'kustomer_email',
+    })
+    data["Start Time"] = pd.to_datetime(data["Start Time"], dayfirst=True, errors="coerce")
 
-def clean_report(data: pd.DataFrame) -> pd.DataFrame    :
-    """
-    Lee un CSV y devuelve un DataFrame con los usuarios cuyo
-    'Most Recent Login' sea igual o posterior a las 00:00 del día
-    actual en hora Perú (UTC−5), incluyendo las columnas:
-      - User ID
-      - Most Recent Login (datetime UTC)
-      - Messages Sent
-      - Total Time Logged In  (formato 'X h Y m')
-    """
-    # 1) Definir zona horaria de Lima
-    lima_tz = ZoneInfo('America/Lima')
+    # Si no se pasa fecha → usar la actual
+    if target_date is None:
+        target_date = pd.Timestamp.today().normalize()  # día actual a medianoche
 
-    data = data.rename(columns={ATTENDANCE_COLUMNS})
-    
-    # 3) Parsear la columna de login como datetime en UTC
-    df[RECENT_LOGIN] = pd.to_datetime(df[RECENT_LOGIN], utc=True)
-    
-    # 4) Calcular 00:00 de hoy en hora Perú y convertirlo a UTC
-    now_lima = datetime.now(lima_tz)
-    start_lima = now_lima.replace(hour=0, minute=0, second=0, microsecond=0)
-    start_utc = start_lima.astimezone(timezone.utc)
-    
-    # 5) Filtrar filas con login ≥ 00:00 hoy (hora Perú)
-    df = df[df[RECENT_LOGIN] >= start_utc].copy()
-    
-    # 6) Función auxiliar para convertir ms a "X h Y m"
-    def ms_to_h_m(ms):
-        secs = ms / 1000
-        h = int(secs // 3600)
-        m = int((secs % 3600) // 60)
-        return f"{h}h {m}m"
-    
-    # 7) Aplicar conversión sobre la columna de milisegundos
-    df[TOTAL_TIME] = df[TOTAL_TIME].apply(ms_to_h_m)
-    
-    # 8) Devolver solo las columnas requeridas
-    return df[[KUSTOMER_ID, RECENT_LOGIN, TOTAL_TIME]]
+    results = []
+
+    # Agrupar por agente
+    for agent, group in data.groupby("kustomer_email"):
+        # Filtrar ONLINE y OFFLINE solo del día elegido
+        group = group[group["Start Time"].dt.normalize() == target_date]
+
+        if group.empty:
+            continue  
+
+        online = group[group["State"].str.upper() == "ONLINE"]
+        offline = group[group["State"].str.upper() == "OFFLINE"]
+
+        if online.empty:
+            # Nunca se conectó → marcar sin asistencia
+            continue  
+
+        # Check-in = primer ONLINE
+        check_in = online["Start Time"].min()
+
+        # Buscar OFFLINE posterior al check-in
+        valid_offline = offline[offline["Start Time"] > check_in]
+        check_out = valid_offline["Start Time"].max() if not valid_offline.empty else None
+
+        # Convertir a tipos compatibles con SQLAlchemy
+        check_in_time = check_in.to_pydatetime().time() if pd.notna(check_in) else None
+        check_out_time = check_out.to_pydatetime().time() if pd.notna(check_out) else None
+
+        results.append({
+            "kustomer_email": agent,
+            "date": check_in.date(),     # guardamos solo la fecha
+            "check_in": check_in_time,   # guardamos la hora
+            "check_out": check_out_time  # guardamos la hora
+        })
+
+    return pd.DataFrame(results)

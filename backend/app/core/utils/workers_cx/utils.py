@@ -18,25 +18,30 @@ def normalize_name_sorted(name: str) -> str:
 
 # Función para actualizar los nombres en una columna basándose en la columna 'WORKER'
 def update_column_based_on_worker(dataframe: pd.DataFrame, dataframe2: pd.DataFrame, column_to_update: str, worker_column: str) -> pd.DataFrame:
-    # Crear un diccionario de mapeo entre los valores de 'column_to_update' y 'worker_column' basados en la similitud de cadenas
     mapping_dict = {}
 
-    # Iterar sobre los valores de 'column_to_update' y buscar la mejor coincidencia en 'worker_column'
+    # normalizar a minúsculas
+    worker_values = dataframe2[worker_column].dropna().unique()
+    worker_lower = [w.lower() for w in worker_values]
+
     for value in dataframe[column_to_update].dropna().unique():
-        # Usar rapidfuzz para encontrar la mejor coincidencia en 'worker_column'
-        result = process.extractOne(value, dataframe2[worker_column].dropna().unique())
-        
-        # Verifica que result no sea None (es decir, que haya encontrado una coincidencia)
+        value_lower = value.lower()
+
+        result = process.extractOne(
+            value_lower,
+            worker_lower,
+            scorer=fuzz.token_sort_ratio  # token_sort_ratio ayuda a comparar nombres con distinto orden
+        )
+
         if result:
-            best_match, score, _ = result  # Desempaqueta los tres valores
+            best_match_lower, score, _ = result
 
-            # Si la similitud es lo suficientemente alta (por ejemplo, un umbral de 80)
             if score > 90:
-                mapping_dict[value] = best_match
+                # recuperar el valor original (no en minúscula) para reemplazar
+                original = worker_values[worker_lower.index(best_match_lower)]
+                mapping_dict[value] = original
 
-    # Reemplazar los valores en 'column_to_update' usando el diccionario de mapeo
     dataframe[column_to_update] = dataframe[column_to_update].replace(mapping_dict)
-
     return dataframe
 
 # ? Limpiar observaciones (NA transformar a vacios)

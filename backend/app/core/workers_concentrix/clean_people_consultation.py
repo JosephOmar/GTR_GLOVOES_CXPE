@@ -93,12 +93,12 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     data[MANAGER] = data[MANAGER].str.title().str.strip()
     data[SUPERVISOR] = data[SUPERVISOR].str.title().str.strip()
     data[COORDINATOR] = data[COORDINATOR].str.title().str.strip()
-
+    print(data[SUPERVISOR].head(20))
     # Corregir el orden de los nombres en las columnas 'manager', 'supervisor' y 'coordinator'
     data = update_column_based_on_worker(data, data, MANAGER, NAME)
     data = update_column_based_on_worker(data, data, SUPERVISOR, NAME)
     data = update_column_based_on_worker(data, data, COORDINATOR, NAME)
-
+    print(data[SUPERVISOR].head(20))
     # Convertir las fechas a formato datetime
     data[START_DATE] = pd.to_datetime(data[START_DATE], errors='coerce')
     data[TERMINATION_DATE] = pd.to_datetime(

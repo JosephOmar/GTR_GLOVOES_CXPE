@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, create_engine, Session
-from app.models.worker import Worker, Role, Status, Campaign, Team, WorkType, ContractType, Attendance, Absence, UbycallSchedule, Schedule
+from app.models.worker import Worker, Role, Status, Campaign, Team, WorkType, ContractType, Attendance, UbycallSchedule, Schedule
 from app.models.data_kpi import PlannedData, RealData
 from typing import Generator
 

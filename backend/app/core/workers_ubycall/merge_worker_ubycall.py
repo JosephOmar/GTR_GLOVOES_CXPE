@@ -43,5 +43,4 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
         on=DOCUMENT,
         how="left"
     )
-    print(final_data['team'])
     return final_data

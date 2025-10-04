@@ -3,6 +3,7 @@ from app.core.utils.workers_cx.utils import fuzzy_match
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.workers_concentrix.clean_scheduling_ppp import clean_scheduling_ppp
 from app.core.workers_concentrix.clean_report_kustomer import clean_report_kustomer
+from app.core.utils.workers_cx.utils import update_column_based_on_worker
 from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, KUSTOMER_ID, TEAM
 import numpy as np
 
@@ -14,8 +15,6 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
     rellenando observaciones y eligiendo TEAM de df_scheduling_ppp
     por encima del de df_people_consultation cuando exista.
     """
-    print(df_people_consultation.columns.to_list())
-    print(df_scheduling_ppp.columns.to_list())
     # Usamos suffixes para distinguir claramente las dos columnas 'team'
     merged = pd.merge(
         df_people_consultation,
@@ -23,8 +22,7 @@ def merge_worker_data(df_people_consultation: pd.DataFrame,
         on='document',
         how='left',
         suffixes=('_people', '_scheduling')
-    )   
-    print(merged.columns.to_list())
+    ) 
 
     # Rellenar observaciones vacías
     merged['observation_1'] = merged['observation_1'].fillna('')
@@ -153,7 +151,10 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
         on=DOCUMENT,
         how="left"
     )
-
+    print(df_final_worker[[SUPERVISOR]].head(20))
+    df_final_worker = update_column_based_on_worker(df_final_worker, df_people_consultation, SUPERVISOR, NAME)
+    print('xd')
+    print(df_final_worker[[SUPERVISOR]].head(20))
     # if despegando is not None:
     #     df_final_worker = merge_with_despegando(df_final_worker, despegando)
 
