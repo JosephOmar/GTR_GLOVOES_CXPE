@@ -126,7 +126,7 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
     #df_report_kustomer = clean_report_kustomer(report_kustomer)
     report_kustomer = report_kustomer.rename(columns={
         'DOCUMENT': DOCUMENT,
-        # 'API EMAIL': KUSTOMER_EMAIL,
+        'API EMAIL': KUSTOMER_EMAIL,
         'API ID': KUSTOMER_ID
     })
 
