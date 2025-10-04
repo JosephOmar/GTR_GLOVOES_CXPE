@@ -50,7 +50,8 @@ async def process_and_persist_attendance(
 
     inserted = 0
     missing_workers = []
-
+    print(df_attendance[df_attendance['kustomer_email'] == 'taflores.whl@service.glovoapp.com'])
+    print(df_attendance[df_attendance['kustomer_email'] == 'jquinte.whl@service.glovoapp.com'])
     # 5) Iterar sobre los registros limpios
     for row in df_attendance.itertuples(index=False):
         kustomer_email = str(row._asdict()["kustomer_email"]).strip()
@@ -80,13 +81,23 @@ async def process_and_persist_attendance(
         # Status por defecto = Absent
         status = "Absent"
 
-        if schedule and schedule.start_time:
-            if check_in:
-                tolerance_time = (datetime.combine(date_row, schedule.start_time) + timedelta(minutes=5)).time()
-                if check_in <= tolerance_time:
-                    status = "Present"
-                else:
-                    status = "Late"
+        if schedule and schedule.start_time and check_in:
+            # Normalizar check_in a datetime.time
+            if isinstance(check_in, pd.Timestamp):
+                check_in_time = check_in.time().replace(microsecond=0)
+            elif isinstance(check_in, datetime):
+                check_in_time = check_in.time().replace(microsecond=0)
+            else:
+                check_in_time = check_in.replace(microsecond=0)
+
+            # Tolerance time
+            tolerance_datetime = datetime.combine(date_row, schedule.start_time) + timedelta(minutes=5)
+            tolerance_time = tolerance_datetime.time().replace(microsecond=0)
+
+            if check_in_time <= tolerance_time:
+                status = "Present"
+            else:
+                status = "Late"
         else:
             # Si no hay schedule o start_time, lo dejamos como Absent
             status = "Absent"

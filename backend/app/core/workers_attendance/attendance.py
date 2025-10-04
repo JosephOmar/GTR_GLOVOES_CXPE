@@ -14,20 +14,26 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
 
     results = []
 
+    data["State"] = data["State"].fillna("")
+
     # Agrupar por agente
     for agent, group in data.groupby("kustomer_email"):
         # Filtrar ONLINE y OFFLINE solo del día elegido
         group = group[group["Start Time"].dt.normalize() == target_date]
 
         if group.empty:
-            continue  
+            continue
 
-        online = group[group["State"].str.upper() == "ONLINE"]
+        # Filtrar ONLINE y AVAILABLE
+        online = group[
+            (group["State"].str.upper() == "ONLINE") |
+            (group["State"].str.upper().str.contains("AVAILABLE", regex=False))
+        ]
         offline = group[group["State"].str.upper() == "OFFLINE"]
 
         if online.empty:
             # Nunca se conectó → marcar sin asistencia
-            continue  
+            continue
 
         # Check-in = primer ONLINE
         check_in = online["Start Time"].min()
