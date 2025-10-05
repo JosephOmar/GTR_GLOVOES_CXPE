@@ -50,14 +50,12 @@ async def process_and_persist_attendance(
 
     inserted = 0
     missing_workers = []
-    print(df_attendance[df_attendance['kustomer_email'] == 'taflores.whl@service.glovoapp.com'])
-    print(df_attendance[df_attendance['kustomer_email'] == 'jquinte.whl@service.glovoapp.com'])
     # 5) Iterar sobre los registros limpios
     for row in df_attendance.itertuples(index=False):
-        kustomer_email = str(row._asdict()["kustomer_email"]).strip()
-        check_in = row._asdict()["check_in"]
-        check_out = row._asdict()["check_out"]
-        date_row = row._asdict()["date"]
+        kustomer_email = str(row.kustomer_email).strip()
+        check_in = row.check_in
+        check_out = row.check_out
+        date_row = row.date
 
         # Buscar worker por email
         worker = session.exec(
@@ -78,46 +76,61 @@ async def process_and_persist_attendance(
             )
         ).first()
 
-        print(f"Worker: {worker.kustomer_email}")
-        print(f"Date row: {date_row} ({type(date_row)})")
-        print(f"Schedule found: {schedule}")
-        if schedule:
-            print(f"Schedule start: {schedule.start_time} ({type(schedule.start_time)})")
-
-        # Status por defecto = Absent
-        status = "Absent"
+        # print(f"Worker: {worker.kustomer_email}")
+        # print(f"Date row: {date_row} ({type(date_row)})")
+        # print(f"Schedule found: {schedule}")
+        # if schedule:
+        #     print(f"Schedule start: {schedule.start_time} ({type(schedule.start_time)})")
 
         if schedule and schedule.start_time and check_in:
-            # Normalizar check_in a datetime.time
+            # Normalizar check_in a datetime
             if isinstance(check_in, pd.Timestamp):
-                check_in_time = check_in.time().replace(microsecond=0)
+                check_in_dt = check_in.to_pydatetime().replace(microsecond=0)
             elif isinstance(check_in, datetime):
-                check_in_time = check_in.time().replace(microsecond=0)
+                check_in_dt = check_in.replace(microsecond=0)
             else:
-                check_in_time = check_in.replace(microsecond=0)
+                # En caso de que venga como time, combinar con la fecha detectada
+                check_in_dt = datetime.combine(date_row, check_in).replace(microsecond=0)
 
-            # Tolerance time
-            tolerance_datetime = datetime.combine(date_row, schedule.start_time) + timedelta(minutes=5)
-            tolerance_time = tolerance_datetime.time().replace(microsecond=0)
+            # Calcular los datetime de inicio y fin de turno
+            start_dt = datetime.combine(date_row, schedule.start_time).replace(microsecond=0)
+            end_dt = datetime.combine(date_row, schedule.end_time).replace(microsecond=0)
 
-            if check_in_time <= tolerance_time:
-                status = "Present"
+            # Si el turno cruza medianoche, sumamos 1 día al end_dt
+            if schedule.end_time < schedule.start_time:
+                end_dt += timedelta(days=1)
+
+            # Definir tolerancia de 5 minutos antes del inicio
+            earliest_valid_checkin = start_dt - timedelta(minutes=5)
+
+            # Validar si el check_in está dentro del rango válido
+            if earliest_valid_checkin <= check_in_dt <= end_dt:
+                # Si está dentro del rango, evaluar si llegó tarde o puntual
+                tolerance_dt = start_dt + timedelta(minutes=5)
+                if check_in_dt <= tolerance_dt:
+                    status = "Present"
+                else:
+                    status = "Late"
             else:
-                status = "Late"
+                # Check-in fuera de rango válido
+                continue  # No se guarda asistencia
+
         else:
-            # Si no hay schedule o start_time, lo dejamos como Absent
             status = "Absent"
+            check_in = None
+            check_out = None
 
-        # Crear registro de asistencia
-        attendance = Attendance(
-            kustomer_email=worker.kustomer_email,
-            date=date_row,
-            check_in=check_in,
-            check_out=check_out,
-            status=status,
-        )
-        session.add(attendance)
-        inserted += 1
+        # Crear registro de asistencia solo si se definió status
+        if status in ("Present", "Late", "Absent"):
+            attendance = Attendance(
+                kustomer_email=worker.kustomer_email,
+                date=date_row,
+                check_in=check_in,
+                check_out=check_out,
+                status=status,
+            )
+            session.add(attendance)
+            inserted += 1
 
     session.commit()
 
