@@ -28,12 +28,12 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
 
     # Paso 3: Reemplazar los valores en la columna 'CAMPANA' (TEAM)
     data[TEAM] = data[TEAM].replace({
-        'GLOVO -  GLOVER ESPANA': 'RIDER TIER 1',
-        'GLOVO -  USER ESPANA': 'CUSTOMER TIER 1',
-        'GLOVO - USER TIER C': 'CUSTOMER TIER 1',
+        'GLOVO -  GLOVER ESPANA': 'RIDER TIER1',
+        'GLOVO -  USER ESPANA': 'CUSTOMER TIER1',
+        'GLOVO - USER TIER C': 'CUSTOMER TIER1',
         'GLOVO - PARTNER SERVICES': 'VENDOR CALL'
     })
-    data = data[data[TEAM].isin(['CUSTOMER TIER 1', 'RIDER TIER 1', 'VENDOR CALL'])]
+    data = data[data[TEAM].isin(['CUSTOMER TIER1', 'RIDER TIER1', 'VENDOR CALL'])]
 
     # Paso 4: Transformar 'START_DATE' de formato 'YYYYMMDD' a datetime
     data[START_DATE] = pd.to_datetime(data[START_DATE], format='%Y%m%d')
