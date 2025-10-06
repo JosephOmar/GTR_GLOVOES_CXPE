@@ -4,54 +4,46 @@ from datetime import time
 def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None) -> pd.DataFrame:
     # Renombrar columnas
     data = data.rename(columns={
-        'Agent Email' : 'kustomer_email',
+        'Agent Email': 'kustomer_email',
     })
     data["Start Time"] = pd.to_datetime(data["Start Time"], dayfirst=True, errors="coerce")
 
     # Si no se pasa fecha → usar la actual
     if target_date is None:
-        target_date = pd.Timestamp.today().normalize()  # día actual a medianoche
+        target_date = pd.Timestamp.today().normalize()
 
     results = []
-
     data["State"] = data["State"].fillna("")
 
     # Agrupar por agente
     for agent, group in data.groupby("kustomer_email"):
-        # Filtrar ONLINE y OFFLINE solo del día elegido
+        # Filtrar registros del día específico
         group = group[group["Start Time"].dt.normalize() == target_date]
-
         if group.empty:
             continue
 
-        # Filtrar ONLINE y AVAILABLE
+        # Filtrar ONLINE/ASSIGNED TASK/AVAILABLE
         online = group[
             (group["State"].str.upper() == "ONLINE") |
             (group["State"].str.upper() == "ASSIGNED TASK") |
             (group["State"].str.upper().str.contains("AVAILABLE", regex=False))
         ]
+        # Filtrar OFFLINE
         offline = group[group["State"].str.upper() == "OFFLINE"]
 
-        if online.empty:
-            # Nunca se conectó → marcar sin asistencia
+        # Convertir a listas de tiempos
+        check_in_times = online["Start Time"].dt.time.tolist()
+        check_out_times = offline["Start Time"].dt.time.tolist()
+
+        if not check_in_times:
+            # Nunca se conectó
             continue
-
-        # Check-in = primer ONLINE
-        check_in = online["Start Time"].min()
-
-        # Buscar OFFLINE posterior al check-in
-        valid_offline = offline[offline["Start Time"] > check_in]
-        check_out = valid_offline["Start Time"].max() if not valid_offline.empty else None
-
-        # Convertir a tipos compatibles con SQLAlchemy
-        check_in_time = check_in.to_pydatetime().time() if pd.notna(check_in) else None
-        check_out_time = check_out.to_pydatetime().time() if pd.notna(check_out) else None
 
         results.append({
             "kustomer_email": agent,
-            "date": check_in.date(),     # guardamos solo la fecha
-            "check_in": check_in_time,   # guardamos la hora
-            "check_out": check_out_time  # guardamos la hora
+            "date": target_date.date(),
+            "check_in_times": check_in_times,
+            "check_out_times": check_out_times
         })
 
     return pd.DataFrame(results)
