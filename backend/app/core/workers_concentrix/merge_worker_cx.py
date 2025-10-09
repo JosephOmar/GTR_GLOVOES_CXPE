@@ -151,11 +151,11 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
         on=DOCUMENT,
         how="left"
     )
-    print(df_final_worker[[SUPERVISOR]].head(20))
+    
     df_final_worker = update_column_based_on_worker(df_final_worker, df_people_consultation, SUPERVISOR, NAME)
-    print('xd')
-    print(df_final_worker[[SUPERVISOR]].head(20))
+    
     # if despegando is not None:
     #     df_final_worker = merge_with_despegando(df_final_worker, despegando)
-
+    print(df_final_worker[df_final_worker[DOCUMENT] == '77209106'])
+    print(df_final_worker[df_final_worker[DOCUMENT] == '72012282'])
     return df_final_worker

@@ -32,6 +32,7 @@ COLUMNS_TEAM = {
     "GERENCIA 1": GERENCIA,
     "MAIL GLOVER ESPAÑA": MAIL_RIDER,
     "PARTNER ONLINECALLS": CALL_VENDORS,
+    "INCIDENTES SEVEROS ESPAÑA" : MAIL_CUSTOMER,
     "MAIL USER ESPAÑA": MAIL_CUSTOMER,
     "GLOVO": GLOVO_SPAIN,
     "GLOVO ESPAÑA": GLOVO_SPAIN,
@@ -44,7 +45,6 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     data = pd.concat([data_active, data_inactive], ignore_index=True)
     # Renombrar las columnas usando el diccionario de traducción
     data = data.rename(columns=COLUMNS_PEOPLE_CONSULTATION)
-
     current_date = datetime.now()
     # Obtener el primer día del mes actual
     primer_dia_mes_actual = current_date.replace(day=1)
@@ -71,7 +71,6 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     )
 
     data = data[cond_activo | cond_inactivo_reciente]
-
     # Filtrar solo workers con team requerida
     team_values = list(COLUMNS_TEAM.keys())
     data = data[data[TEAM].isin(team_values)]
@@ -93,12 +92,14 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     data[MANAGER] = data[MANAGER].str.title().str.strip()
     data[SUPERVISOR] = data[SUPERVISOR].str.title().str.strip()
     data[COORDINATOR] = data[COORDINATOR].str.title().str.strip()
-    print(data[SUPERVISOR].head(20))
+    
     # Corregir el orden de los nombres en las columnas 'manager', 'supervisor' y 'coordinator'
     data = update_column_based_on_worker(data, data, MANAGER, NAME)
     data = update_column_based_on_worker(data, data, SUPERVISOR, NAME)
     data = update_column_based_on_worker(data, data, COORDINATOR, NAME)
-    print(data[SUPERVISOR].head(20))
+    print('xd')
+    print(data[data[DOCUMENT] == '77209106'])
+    print(data[data[DOCUMENT] == '72012282'])
     # Convertir las fechas a formato datetime
     data[START_DATE] = pd.to_datetime(data[START_DATE], errors='coerce')
     data[TERMINATION_DATE] = pd.to_datetime(
@@ -145,5 +146,7 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     columns_to_keep = [DOCUMENT, NAME, ROLE, STATUS, CAMPAIGN, TEAM, MANAGER,
                        SUPERVISOR, COORDINATOR, CONTRACT_TYPE, START_DATE, TERMINATION_DATE, WORK_TYPE, REQUIREMENT_ID, TENURE, TRAINEE]
     data = data[columns_to_keep]
-
+    print('xd')
+    print(data[data[DOCUMENT] == '77209106'])
+    print(data[data[DOCUMENT] == '72012282'])
     return data
