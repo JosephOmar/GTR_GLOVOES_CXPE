@@ -14,7 +14,7 @@ EXCEL_READ_CONFIGS: Dict[str, Dict[str, Any]] = {
         "skiprows": 3,
         "engine": "openpyxl",
     },
-    "report_kustomer": {},      # si necesita algo especial, lo pones aquí
+    "api_id": {},      # si necesita algo especial, lo pones aquí
     "master_glovo": {
         "sheet_name": "AGENTES_UBY",
         "engine": "openpyxl",

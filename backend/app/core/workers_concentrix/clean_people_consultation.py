@@ -83,9 +83,14 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
         (data[CAMPAIGN] == 'GERENCIA 1') & (data[ROLE] == 'GERENTE DE OPERACIONES'))]
 
     # Verificar si los apellidos están presentes en 'employee_name', si es así, evitar duplicarlos
-    data[NAME] = data.apply(lambda row: f"{row[EMPLOYEE_NAME]} {row[FATHER_LAST_NAME]} {row[MOTHER_LAST_NAME]}".strip()
-                            if row[FATHER_LAST_NAME] not in row[EMPLOYEE_NAME] and row[MOTHER_LAST_NAME] not in row[EMPLOYEE_NAME]
-                            else row[EMPLOYEE_NAME], axis=1)
+    data[NAME] = data.apply(
+        lambda row: " ".join(
+            dict.fromkeys(
+                f"{row[EMPLOYEE_NAME]} {row[FATHER_LAST_NAME]} {row[MOTHER_LAST_NAME]}".split()
+            )
+        ),
+        axis=1
+    )
 
     # Normalizar los nombres
     data[NAME] = data[NAME].str.title()

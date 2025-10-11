@@ -7,10 +7,9 @@ _WORKERS_MAPPING = {
     "people_active":      "people_active",
     "people_inactive":      "people_inactive",
     "scheduling_ppp":       "scheduling_ppp",
-    "report_kustomer":                   "report_kustomer",
+    "api_id":                   "api_id",
     "master_glovo":            "master_glovo",
     "scheduling_ubycall":                  "scheduling_ubycall",
-    "taking_off":                  "taking_off",
 }
 
 

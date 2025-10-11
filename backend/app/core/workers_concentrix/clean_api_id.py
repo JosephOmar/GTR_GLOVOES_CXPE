@@ -10,7 +10,7 @@ COLUMNS_REPORT = {
     "Most Recent Login": RECENT_LOGIN,
 }
 
-def clean_report_kustomer(data: pd.DataFrame) -> pd.DataFrame:
+def clean_api_id(data: pd.DataFrame) -> pd.DataFrame:
     # 🔹 Filtro: eliminar emails con @dyglovo y TIME_LOGGED = 0
     data = data[~(
         data["User Email"].str.contains(r'@dyglovo', na=False)

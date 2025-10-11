@@ -45,18 +45,17 @@ async def process_and_persist_workers(
             "people_active":"people_active",
             "people_inactive":"people_inactive",
             "scheduling_ppp":"scheduling_ppp",
-            "report_kustomer":"report_kustomer",
+            "api_id":"api_id",
             "master_glovo":"master_glovo",
             "scheduling_ubycall":"scheduling_ubycall",
-            "taking_off": "taking_off"
         },
-        required_slots=["people_active","people_inactive","scheduling_ppp","report_kustomer","taking_off"],
-        post_process=lambda people_active, people_inactive, scheduling_ppp, report_kustomer, taking_off, **slots: pd.concat([
-            generate_worker_cx_table(people_active, people_inactive, scheduling_ppp,report_kustomer, taking_off),
+        required_slots=["people_active","people_inactive","scheduling_ppp","api_id"],
+        post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, **slots: pd.concat([
+            generate_worker_cx_table(people_active, people_inactive, scheduling_ppp,api_id),
             generate_worker_uby_table(
                 slots["master_glovo"],
                 slots["scheduling_ubycall"],
-                report_kustomer,
+                api_id,
                 people_active,
                 people_inactive,
             )

@@ -102,7 +102,7 @@ async def process_and_persist_attendance(
             if schedule.end_time < schedule.start_time:
                 end_dt += timedelta(days=1)
 
-            earliest_valid_checkin = start_dt - timedelta(minutes=125)
+            earliest_valid_checkin = start_dt - timedelta(minutes=180)
 
             if earliest_valid_checkin <= check_in_dt <= end_dt:
                 tolerance_dt = start_dt + timedelta(minutes=10)

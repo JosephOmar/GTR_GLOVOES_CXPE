@@ -9,7 +9,7 @@ COLUMNS_SCHEDULING_UBYCALL = {
     "DNI": DOCUMENT,
     "NOMBRECOMPLETO": NAME,
     "HORARIOSELECCIONADO": STATUS,
-    "FECHA_CREA_AGENTE": START_DATE,
+    #"FECHA_CREA_AGENTE": START_DATE,
     # "CORREO": KUSTOMER_EMAIL,
     "CAMPANA": TEAM
 }
@@ -36,18 +36,18 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     data = data[data[TEAM].isin(['CUSTOMER TIER1', 'RIDER TIER1', 'VENDOR CALL'])]
 
     # Paso 4: Transformar 'START_DATE' de formato 'YYYYMMDD' a datetime
-    data[START_DATE] = pd.to_datetime(data[START_DATE], format='%Y%m%d')
+    # data[START_DATE] = pd.to_datetime(data[START_DATE], format='%Y%m%d')
 
-    # Paso 5: Calcular la antigüedad en meses (TENURE)
-    # Fecha actual
-    current_date = datetime.now()
+    # # Paso 5: Calcular la antigüedad en meses (TENURE)
+    # # Fecha actual
+    # current_date = datetime.now()
 
     # Calcular la antigüedad en meses
-    data[TENURE] = data[START_DATE].apply(
-        lambda x: 0 if (current_date.year == x.year and current_date.month == x.month) or
-        (current_date.year == x.year and current_date.month - x.month == 1 and current_date.day < x.day) else
-        (current_date.year - x.year) * 12 + current_date.month - x.month
-    )
+    # data[TENURE] = data[START_DATE].apply(
+    #     lambda x: 0 if (current_date.year == x.year and current_date.month == x.month) or
+    #     (current_date.year == x.year and current_date.month - x.month == 1 and current_date.day < x.day) else
+    #     (current_date.year - x.year) * 12 + current_date.month - x.month
+    # )
 
     data[SUPERVISOR] = np.nan
     data[COORDINATOR] = np.nan

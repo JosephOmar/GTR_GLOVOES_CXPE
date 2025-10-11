@@ -2,7 +2,7 @@ import pandas as pd
 from app.core.utils.workers_cx.utils import fuzzy_match
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.workers_concentrix.clean_scheduling_ppp import clean_scheduling_ppp
-from app.core.workers_concentrix.clean_report_kustomer import clean_report_kustomer
+from app.core.workers_concentrix.clean_api_id import clean_api_id
 from app.core.utils.workers_cx.utils import update_column_based_on_worker
 from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, KUSTOMER_ID, TEAM
 import numpy as np
@@ -119,12 +119,12 @@ def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataF
 
 
 
-def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.DataFrame, scheduling_ppp: pd.DataFrame, report_kustomer: pd.DataFrame, despegando: pd.DataFrame) -> pd.DataFrame:
+def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.DataFrame, scheduling_ppp: pd.DataFrame, api_id: pd.DataFrame) -> pd.DataFrame:
 
     df_people_consultation = clean_people_consultation(people_active, people_inactive)
     df_scheduling_ppp = clean_scheduling_ppp(scheduling_ppp)
-    #df_report_kustomer = clean_report_kustomer(report_kustomer)
-    report_kustomer = report_kustomer.rename(columns={
+    #df_api_id = clean_api_id(api_id)
+    api_id = api_id.rename(columns={
         'DOCUMENT': DOCUMENT,
         'API EMAIL': KUSTOMER_EMAIL,
         'API ID': KUSTOMER_ID
@@ -143,11 +143,11 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
        'RUBIK VENDOR' : 'VENDOR TIER2',
     })
 
-    #df_final_worker = merge_by_similar_name(df_people_and_ppp, df_report_kustomer, NAME, KUSTOMER_NAME)
+    #df_final_worker = merge_by_similar_name(df_people_and_ppp, df_api_id, NAME, KUSTOMER_NAME)
 
     df_final_worker = pd.merge(
         df_people_and_ppp,
-        report_kustomer,
+        api_id,
         on=DOCUMENT,
         how="left"
     )
