@@ -8,7 +8,7 @@ from app.core.utils.workers_cx.columns_names import DOCUMENT, NAME, STATUS, STAR
 COLUMNS_SCHEDULING_UBYCALL = {
     "DNI": DOCUMENT,
     "NOMBRECOMPLETO": NAME,
-    "HORARIOSELECCIONADO": STATUS,
+    #"HORARIOSELECCIONADO": STATUS,
     #"FECHA_CREA_AGENTE": START_DATE,
     # "CORREO": KUSTOMER_EMAIL,
     "CAMPANA": TEAM
@@ -51,6 +51,6 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
 
     data[SUPERVISOR] = np.nan
     data[COORDINATOR] = np.nan
-    data[STATUS] = data[STATUS].str.capitalize()
+    #data[STATUS] = data[STATUS].str.capitalize()
 
     return data
