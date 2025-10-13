@@ -39,7 +39,6 @@ COLUMNS_TEAM = {
     "UPDATE": UPDATE
 }
 
-
 def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataFrame) -> pd.DataFrame:
 
     data = pd.concat([data_active, data_inactive], ignore_index=True)
@@ -47,32 +46,33 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     data = data.rename(columns=COLUMNS_PEOPLE_CONSULTATION)
     current_date = datetime.now()
     # Obtener el primer día del mes actual
-    primer_dia_mes_actual = current_date.replace(day=1)
+    first_day_month = current_date.replace(day=1)
 
     if current_date.day <= 10:
         # Si está entre el día 1 y el 10, obtener el primer día del mes anterior
-        if primer_dia_mes_actual.month == 1:
+        if first_day_month.month == 1:
             # Caso especial: si es enero, el mes anterior es diciembre del año anterior
-            primer_dia_mes_anterior = primer_dia_mes_actual.replace(
-                year=primer_dia_mes_actual.year - 1, month=12)
+            first_day_last_month = first_day_month.replace(
+                year=first_day_month.year - 1, month=12)
         else:
-            primer_dia_mes_anterior = primer_dia_mes_actual.replace(
-                month=primer_dia_mes_actual.month - 1)
-        fecha_limite = primer_dia_mes_anterior
+            first_day_last_month = first_day_month.replace(
+                month=first_day_month.month - 1)
+        limit_date = first_day_last_month
     else:
         # Si está después del día 10, se usa el primer día del mes actual
-        fecha_limite = primer_dia_mes_actual
+        limit_date = first_day_month
 
-    cond_activo = data[STATUS].str.lower() == 'activo'
-    cond_inactivo_reciente = (
+    worker_active = data[STATUS].str.lower() == 'activo'
+    worker_inactive = (
         (data[STATUS].str.lower() == 'inactivo') &
         (pd.to_datetime(data[TERMINATION_DATE],
-         errors='coerce') >= fecha_limite)
+         errors='coerce') >= limit_date)
     )
 
-    data = data[cond_activo | cond_inactivo_reciente]
+    data = data[worker_active | worker_inactive]
     # Filtrar solo workers con team requerida
     team_values = list(COLUMNS_TEAM.keys())
+
     data = data[data[TEAM].isin(team_values)]
 
     # Renombrar Team
@@ -102,9 +102,7 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     data = update_column_based_on_worker(data, data, MANAGER, NAME)
     data = update_column_based_on_worker(data, data, SUPERVISOR, NAME)
     data = update_column_based_on_worker(data, data, COORDINATOR, NAME)
-    print('xd')
-    print(data[data[DOCUMENT] == '77209106'])
-    print(data[data[DOCUMENT] == '72012282'])
+
     # Convertir las fechas a formato datetime
     data[START_DATE] = pd.to_datetime(data[START_DATE], errors='coerce')
     data[TERMINATION_DATE] = pd.to_datetime(
@@ -151,7 +149,4 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
     columns_to_keep = [DOCUMENT, NAME, ROLE, STATUS, CAMPAIGN, TEAM, MANAGER,
                        SUPERVISOR, COORDINATOR, CONTRACT_TYPE, START_DATE, TERMINATION_DATE, WORK_TYPE, REQUIREMENT_ID, TENURE, TRAINEE]
     data = data[columns_to_keep]
-    print('xd')
-    print(data[data[DOCUMENT] == '77209106'])
-    print(data[data[DOCUMENT] == '72012282'])
     return data

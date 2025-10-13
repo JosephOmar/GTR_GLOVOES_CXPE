@@ -3,14 +3,14 @@ from datetime import datetime
 import numpy as np
 
 # Importar las variables
-from app.core.utils.workers_cx.columns_names import DOCUMENT, NAME, STATUS, START_DATE, KUSTOMER_EMAIL, SUPERVISOR, COORDINATOR, TEAM, TENURE, CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS
+from app.core.utils.workers_cx.columns_names import DOCUMENT, NAME, STATUS, START_DATE, SUPERVISOR, COORDINATOR, TEAM, TENURE, CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS
 
 COLUMNS_SCHEDULING_UBYCALL = {
     "DNI": DOCUMENT,
     "NOMBRECOMPLETO": NAME,
     #"HORARIOSELECCIONADO": STATUS,
     #"FECHA_CREA_AGENTE": START_DATE,
-    # "CORREO": KUSTOMER_EMAIL,
+    # "CORREO": api_email,
     "CAMPANA": TEAM
 }
 
@@ -45,7 +45,7 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     # Calcular la antigüedad en meses
     # data[TENURE] = data[START_DATE].apply(
     #     lambda x: 0 if (current_date.year == x.year and current_date.month == x.month) or
-    #     (current_date.year == x.year and current_date.month - x.month == 1 and current_date.day < x.day) else
+    #     (current_date.year == x.year and current_date.month - x.month == 1 and current_duate.day < x.day) else
     #     (current_date.year - x.year) * 12 + current_date.month - x.month
     # )
 

@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 
 # Importar las variables
-from app.core.utils.workers_cx.columns_names import DOCUMENT, NAME, STATUS, START_DATE, KUSTOMER_EMAIL, SUPERVISOR, COORDINATOR, TEAM, TENURE, CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS
+from app.core.utils.workers_cx.columns_names import DOCUMENT, NAME, STATUS, START_DATE, SUPERVISOR, COORDINATOR, TEAM, TENURE, CHAT_CUSTOMER, CHAT_RIDER, CALL_VENDORS
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.utils.workers_cx.utils import update_column_based_on_worker
 
@@ -12,7 +12,7 @@ COLUMNS_MASTER_GLOVO = {
     "NOMBRE": NAME,
     "ESTADO": STATUS,
     "FECHA DE ALTA": START_DATE,
-    # "Usuario Kustomer": KUSTOMER_EMAIL,
+    # "Usuario Kustomer": api_email,
     "SUPERVISOR": SUPERVISOR,
     "RESPONSABLE": COORDINATOR,
     "CANALES GLOVO": TEAM
@@ -53,5 +53,5 @@ def clean_master_glovo(data: pd.DataFrame, people_active: pd.DataFrame, people_i
         (current_date.year - x.year) * 12 + current_date.month - x.month
     )
     data[STATUS] = data[STATUS].str.capitalize()
-    # data[KUSTOMER_EMAIL] = data[KUSTOMER_EMAIL].str.lower()
+    # data[api_email] = data[api_email].str.lower()
     return data

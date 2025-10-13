@@ -23,7 +23,7 @@ class ContractTypeRead(SQLModel):
 
 class AttendanceRead(SQLModel):
     id: int
-    kustomer_email: str
+    api_email: str
     date: date
     check_in: Optional[time]
     check_out: Optional[time]
@@ -51,9 +51,9 @@ class WorkerRead(SQLModel):
     start_date: Optional[date]
     termination_date: Optional[date]
     requirement_id: Optional[str]
-    kustomer_id: Optional[str]
-    kustomer_name: Optional[str]
-    kustomer_email: Optional[str]
+    api_id: Optional[str]
+    api_name: Optional[str]
+    api_email: Optional[str]
     observation_1: Optional[str]
     observation_2: Optional[str]
     tenure: Optional[int]

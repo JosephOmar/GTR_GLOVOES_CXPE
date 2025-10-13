@@ -13,34 +13,27 @@ START_DATE = "start_date"
 TERMINATION_DATE = "termination_date"
 CONTRACT_TYPE = "contract_type"
 REQUIREMENT_ID = "requirement_id"
-KUSTOMER_ID = "kustomer_id"
-KUSTOMER_NAME = "kustomer_name"
-KUSTOMER_EMAIL = "kustomer_email"
+API_ID = "api_id"
+API_NAME = "api_name"
 API_EMAIL = "api_email"
 TENURE = "tenure"
 TRAINEE = 'trainee'
 OBSERVATION_1 = 'observation_1'
 OBSERVATION_2 = 'observation_2'
 
-TIME_LOGGED = "time_logged"
-RECENT_LOGIN = "recent_login"
-DATE_LOGIN = "date_login"
-
+#DATA PEOPLE
 EMPLOYEE_NAME = "employee_name"
 FATHER_LAST_NAME = "father_last_name"
 MOTHER_LAST_NAME = "mother_last_name"
 
-##TEAMS##
+#TEAMS
 CHAT_CUSTOMER = "CUSTOMER "
 CHAT_RIDER = "RIDER "
-
 MAIL_CUSTOMER = "CUSTOMER "
 MAIL_RIDER = "RIDER "
 MAIL_VENDORS = "VENDOR "
 UPDATE = "UPDATE"
-
 CALL_VENDORS = "VENDOR "
-
 GLOVO_SPAIN = "GLOVO ESPAÑA"
 GERENCIA = "GERENCIA"
 

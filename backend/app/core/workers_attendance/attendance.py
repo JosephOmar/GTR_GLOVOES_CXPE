@@ -4,7 +4,7 @@ from datetime import time
 def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None) -> pd.DataFrame:
     # Renombrar columnas
     data = data.rename(columns={
-        'Agent Email': 'kustomer_email',
+        'Agent Email': 'api_email',
     })
     data["Start Time"] = pd.to_datetime(data["Start Time"], dayfirst=True, errors="coerce")
 
@@ -16,7 +16,7 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
     data["State"] = data["State"].fillna("")
 
     # Agrupar por agente
-    for agent, group in data.groupby("kustomer_email"):
+    for agent, group in data.groupby("api_email"):
         # Filtrar registros del día específico
         group = group[group["Start Time"].dt.normalize() == target_date]
         if group.empty:
@@ -41,7 +41,7 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
             continue
 
         results.append({
-            "kustomer_email": agent,
+            "api_email": agent,
             "date": target_date.date(),
             "check_in_times": check_in_times,
             "check_out_times": check_out_times

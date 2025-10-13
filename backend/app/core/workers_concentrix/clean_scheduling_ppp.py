@@ -1,13 +1,13 @@
 import pandas as pd
 from app.core.utils.workers_cx.utils import clean_observations
-from app.core.utils.workers_cx.columns_names import DOCUMENT, OBSERVATION_1, OBSERVATION_2, TEAM, KUSTOMER_EMAIL, REQUIREMENT_ID, SUPERVISOR
+from app.core.utils.workers_cx.columns_names import DOCUMENT, OBSERVATION_1, OBSERVATION_2, TEAM, REQUIREMENT_ID, SUPERVISOR
 
 COLUMNS_SCHEDULING_PPP = {
     "DNI": DOCUMENT,
     "CANAL": TEAM,
     "Observaciones 1°": OBSERVATION_1,
     "Observaciones 2°": OBSERVATION_2,
-    # "Usuarios" : KUSTOMER_EMAIL,
+    # "Usuarios" : api_email,
     "id" : REQUIREMENT_ID,
     "SUPERVISOR" : SUPERVISOR
 }

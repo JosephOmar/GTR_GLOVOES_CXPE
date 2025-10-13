@@ -2,9 +2,8 @@ import pandas as pd
 from app.core.utils.workers_cx.utils import fuzzy_match
 from app.core.workers_concentrix.clean_people_consultation import clean_people_consultation
 from app.core.workers_concentrix.clean_scheduling_ppp import clean_scheduling_ppp
-from app.core.workers_concentrix.clean_api_id import clean_api_id
 from app.core.utils.workers_cx.utils import update_column_based_on_worker
-from app.core.utils.workers_cx.columns_names import NAME, KUSTOMER_NAME, KUSTOMER_EMAIL, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, KUSTOMER_ID, TEAM
+from app.core.utils.workers_cx.columns_names import NAME, API_EMAIL, API_ID, DOCUMENT, SUPERVISOR, REQUIREMENT_ID, TEAM
 import numpy as np
 
 # Función para combinar los DataFrames basados en la columna 'DOCUMENT'
@@ -116,23 +115,20 @@ def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataF
 
     return merged
 
-
-
-
 def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.DataFrame, scheduling_ppp: pd.DataFrame, api_id: pd.DataFrame) -> pd.DataFrame:
 
     df_people_consultation = clean_people_consultation(people_active, people_inactive)
     df_scheduling_ppp = clean_scheduling_ppp(scheduling_ppp)
-    #df_api_id = clean_api_id(api_id)
+
     api_id = api_id.rename(columns={
         'DOCUMENT': DOCUMENT,
-        'API EMAIL': KUSTOMER_EMAIL,
-        'API ID': KUSTOMER_ID
+        'API EMAIL': API_EMAIL,
+        'API ID': API_ID
     })
-
+    print(api_id[API_EMAIL])
     df_people_and_ppp = merge_worker_data(df_people_consultation, df_scheduling_ppp)
 
-    df_people_and_ppp['team'] = df_people_and_ppp['team'].replace({
+    df_people_and_ppp[TEAM] = df_people_and_ppp[TEAM].replace({
        'CUSTOMER TIER1' : 'CUSTOMER TIER1',
        'RIDER TIER1' : 'RIDER TIER1',
        'VENDOR TIER1' : 'VENDOR CALL',
@@ -143,8 +139,6 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
        'RUBIK VENDOR' : 'VENDOR TIER2',
     })
 
-    #df_final_worker = merge_by_similar_name(df_people_and_ppp, df_api_id, NAME, KUSTOMER_NAME)
-
     df_final_worker = pd.merge(
         df_people_and_ppp,
         api_id,
@@ -153,9 +147,5 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
     )
     
     df_final_worker = update_column_based_on_worker(df_final_worker, df_people_consultation, SUPERVISOR, NAME)
-    
-    # if despegando is not None:
-    #     df_final_worker = merge_with_despegando(df_final_worker, despegando)
-    print(df_final_worker[df_final_worker[DOCUMENT] == '77209106'])
-    print(df_final_worker[df_final_worker[DOCUMENT] == '72012282'])
+    print(df_final_worker[API_EMAIL])
     return df_final_worker

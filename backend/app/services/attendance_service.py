@@ -52,15 +52,15 @@ async def process_and_persist_attendance(
     missing_workers = []
 
     for row in df_attendance.itertuples(index=False):
-        kustomer_email = str(row.kustomer_email).strip()
+        api_email = str(row.api_email).strip()
         date_row = row.date
 
         worker = session.exec(
-            select(Worker).where(Worker.kustomer_email == kustomer_email)
+            select(Worker).where(Worker.api_email == api_email)
         ).first()
 
         if not worker:
-            missing_workers.append(kustomer_email)
+            missing_workers.append(api_email)
             continue
 
         schedule = session.exec(
@@ -72,7 +72,7 @@ async def process_and_persist_attendance(
             )
         ).first()
 
-        print(f"\n--- Procesando {kustomer_email} ---")
+        print(f"\n--- Procesando {api_email} ---")
         if schedule:
             print(f"Horario: {schedule.start_time} - {schedule.end_time}")
         else:
@@ -115,7 +115,7 @@ async def process_and_persist_attendance(
             check_in = None
 
         attendance = Attendance(
-            kustomer_email=worker.kustomer_email,
+            api_email=worker.api_email,
             date=date_row,
             check_in=check_in,
             check_out=None,

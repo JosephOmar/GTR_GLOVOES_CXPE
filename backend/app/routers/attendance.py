@@ -65,14 +65,14 @@ def read_today_attendance(session: Session = Depends(get_session)) -> Dict[str, 
         if not worker:
             continue  # skip si no existe el worker
 
-        key = (worker.kustomer_email, today)
+        key = (worker.api_email, today)
         if key in attendance_map:
             # Ya tiene registro real
             results.append(attendance_map[key])
         else:
             # Crear registro "virtual" absent
             absent_record = Attendance(
-                worker_email=worker.kustomer_email,
+                worker_email=worker.api_email,
                 date=today,
                 status="absent",
                 check_in=None,

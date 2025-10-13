@@ -55,9 +55,9 @@ class Worker(SQLModel, table=True):
     termination_date: Optional[date] = Field(default=None)
     contract_type_id: Optional[int] = Field(default=None, foreign_key="contracttype.id")
     requirement_id: Optional[str] = Field(default=None, max_length=15)
-    kustomer_id: Optional[str] = Field(default=None, max_length=40)
-    kustomer_name: Optional[str] = Field(default=None, max_length=60)
-    kustomer_email: Optional[str] = Field(default=None, max_length=60)
+    api_id: Optional[str] = Field(default=None, max_length=40)
+    api_name: Optional[str] = Field(default=None, max_length=60)
+    api_email: Optional[str] = Field(default=None, max_length=60)
     observation_1: Optional[str] = Field(default=None, max_length=60)
     observation_2: Optional[str] = Field(default=None, max_length=60)
     tenure: Optional[int] = Field(default=None)
@@ -122,7 +122,7 @@ class Attendance(SQLModel, table=True):
     - Observaciones de puntualidad, faltas, etc.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    kustomer_email: str = Field(foreign_key="worker.kustomer_email")
+    api_email: str = Field(foreign_key="worker.api_email")
 
     date: date
     check_in: Optional[time] = None
