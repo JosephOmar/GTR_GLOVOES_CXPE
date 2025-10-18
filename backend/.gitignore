@@ -3,4 +3,5 @@
 .env
 .env.production
 
-
+alembic/
+alembic.ini
