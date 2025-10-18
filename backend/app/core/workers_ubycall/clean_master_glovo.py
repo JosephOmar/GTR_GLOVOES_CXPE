@@ -54,4 +54,4 @@ def clean_master_glovo(data: pd.DataFrame, people_active: pd.DataFrame, people_i
     )
     data[STATUS] = data[STATUS].str.capitalize()
     # data[api_email] = data[api_email].str.lower()
-    return data
+    return data[list(COLUMNS_MASTER_GLOVO.values()) + [TENURE]]

@@ -1,5 +1,5 @@
 import pandas as pd
-from app.core.utils.real_data_view.columns_names import (
+from app.core.utils.planned.columns_names import (
     TEAM, TIME_INTERVAL, SAT_ABUSER, AHT, REAL_RECEIVED, SERVICE_LEVEL
 )
 

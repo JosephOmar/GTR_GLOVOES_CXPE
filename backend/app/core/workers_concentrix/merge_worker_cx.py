@@ -119,13 +119,13 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
 
     df_people_consultation = clean_people_consultation(people_active, people_inactive)
     df_scheduling_ppp = clean_scheduling_ppp(scheduling_ppp)
-
+    
     api_id = api_id.rename(columns={
         'DOCUMENT': DOCUMENT,
         'API EMAIL': API_EMAIL,
         'API ID': API_ID
     })
-    print(api_id[API_EMAIL])
+    api_id = api_id[[DOCUMENT, API_EMAIL, API_ID]]
     df_people_and_ppp = merge_worker_data(df_people_consultation, df_scheduling_ppp)
 
     df_people_and_ppp[TEAM] = df_people_and_ppp[TEAM].replace({
@@ -147,5 +147,5 @@ def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.Da
     )
     
     df_final_worker = update_column_based_on_worker(df_final_worker, df_people_consultation, SUPERVISOR, NAME)
-    print(df_final_worker[API_EMAIL])
+    
     return df_final_worker

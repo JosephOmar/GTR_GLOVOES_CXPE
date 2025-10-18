@@ -9,12 +9,13 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
     # Concatenar ambos DataFrames
     master_glovo = clean_master_glovo(master_glovo, people_active, people_inactive)
     scheduling_ubycall = clean_scheduling_ubycall(scheduling_ubycall)
+    
     api_id = api_id.rename(columns={
         'DOCUMENT': DOCUMENT,
         'API EMAIL': API_EMAIL,
         'API ID': API_ID
     })
-
+    api_id = api_id[[DOCUMENT, API_EMAIL, API_ID]]
     combined_data = pd.concat([master_glovo, scheduling_ubycall])
     
     # Eliminar duplicados basados en 'DOCUMENT', manteniendo solo el primer registro

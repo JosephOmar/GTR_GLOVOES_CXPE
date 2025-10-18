@@ -41,7 +41,15 @@ COLUMNS_TEAM = {
 
 def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataFrame) -> pd.DataFrame:
 
-    data = pd.concat([data_active, data_inactive], ignore_index=True)
+    frames = [
+        df for df in [data_active, data_inactive]
+        if not df.empty and not df.isna().all().all()
+    ]
+
+    if frames:
+        data = pd.concat(frames, ignore_index=True)
+    else:
+        data = pd.DataFrame()
     # Renombrar las columnas usando el diccionario de traducción
     data = data.rename(columns=COLUMNS_PEOPLE_CONSULTATION)
     current_date = datetime.now()

@@ -1,5 +1,5 @@
 import pandas as pd
-from app.core.utils.real_data_view.columns_names import TEAM, DATE, TIME_INTERVAL, SERVICE_LEVEL, REAL_RECEIVED, SAT_ABUSER
+from app.core.utils.planned.columns_names import TEAM, DATE, TIME_INTERVAL, SERVICE_LEVEL, REAL_RECEIVED, SAT_ABUSER
 from app.core.operational_view.clean_planned_data import clean_planned_data
 from app.core.operational_view.clean_assembled_data import clean_assembled_data
 from app.core.operational_view.clean_kustomer_data import clean_kustomer_data

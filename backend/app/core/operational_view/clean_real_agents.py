@@ -1,6 +1,6 @@
 import pandas as pd
 import pytz
-from app.core.utils.real_data_view.columns_names import TEAM, DATE, TIME_INTERVAL, AGENTS_ONLINE, AGENTS_TRAINING, AGENTS_AUX
+from app.core.utils.planned.columns_names import TEAM, DATE, TIME_INTERVAL, AGENTS_ONLINE, AGENTS_TRAINING, AGENTS_AUX
 
 COLUMNS_REAL_AGENTS = {
     'Marca temporal': DATE,

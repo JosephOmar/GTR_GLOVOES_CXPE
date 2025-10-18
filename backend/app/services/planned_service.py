@@ -3,7 +3,7 @@
 from fastapi import UploadFile
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_planned import validate_excel_planned
-from app.core.report_updates.clean_planned_hc import clean_planned_data
+from app.core.planned.clean_planned_data import clean_planned_data
 from datetime import date, datetime
 import pandas as pd
 from fastapi import HTTPException
@@ -69,6 +69,7 @@ async def planned_service(file1: UploadFile, session: Session):
             team=safe_str(row.get("team")),
             date=safe_date(row.get("date")),
             interval=safe_str(row.get("interval")),
+            forecast_tht=safe_int(row.get("forecast_tht")),
             forecast_received=safe_int(row.get("forecast_received")),
             required_agents=safe_int(row.get("required_agents")),
             scheduled_agents=safe_int(row.get("scheduled_agents")),

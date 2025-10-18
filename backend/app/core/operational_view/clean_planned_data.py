@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime, timedelta
-from app.core.utils.real_data_view.columns_names import (
-    TEAM, DATE, TIME_INTERVAL, FORECAST_RECEIVED, FORECAST_AHT, 
+from app.core.utils.planned.columns_names import (
+    TEAM, DATE, TIME_INTERVAL, FORECAST_RECEIVED, 
     FORECAST_ABSENTEEISM, REQUIRED_AGENTS, SCHEDULED_AGENTS, 
     FORECAST_HOURS, SCHEDULED_HOURS
 )
@@ -11,7 +11,7 @@ COLUMNS_PLANNED_DATA = {
     'Fecha': DATE,
     'Intervalo': TIME_INTERVAL,
     'Pronostico-Recibidas': 'interval',
-    'Pronostico-TMO': FORECAST_AHT,
+    # 'Pronostico-TMO': FORECAST_AHT,
     'Pronostico-Ausentismo': FORECAST_ABSENTEEISM,
     'RAC_s Planificados Disponibles': REQUIRED_AGENTS,
     'Programados sin ausentismo + Ubycall': SCHEDULED_AGENTS,

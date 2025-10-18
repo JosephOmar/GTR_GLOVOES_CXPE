@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from app.core.utils.real_data_view.columns_names import TEAM, DATE, TIME_INTERVAL, SERVICE_LEVEL, REAL_RECEIVED, AHT
+from app.core.utils.planned.columns_names import TEAM, DATE, TIME_INTERVAL, SERVICE_LEVEL, REAL_RECEIVED, AHT
 
 COLUMNS_ASSEMBLED_DATA = {
     'Start Time': TIME_INTERVAL,

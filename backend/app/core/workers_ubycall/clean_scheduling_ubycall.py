@@ -53,4 +53,4 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
     data[COORDINATOR] = np.nan
     #data[STATUS] = data[STATUS].str.capitalize()
 
-    return data
+    return data[[DOCUMENT, NAME, TEAM]]

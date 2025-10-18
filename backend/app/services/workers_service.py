@@ -8,11 +8,15 @@ from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_workers import validate_excel_workers
 from app.core.workers_concentrix.merge_worker_cx import generate_worker_cx_table
 from app.core.workers_ubycall.merge_worker_ubycall import generate_worker_uby_table
-from app.crud.worker import upsert_lookup_table, upsert_worker
+from app.crud.worker import upsert_lookup_table, upsert_worker, bulk_upsert_workers
 from app.models.worker import Role, Status, Campaign, Team, WorkType, ContractType, Worker
 from datetime import datetime
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
 
 def safe_date(value):
     if pd.isna(value):
@@ -70,47 +74,36 @@ async def process_and_persist_workers(
     team_map      = upsert_lookup_table(session, Team,       df["team"].tolist())
     worktype_map  = upsert_lookup_table(session, WorkType,   df["work_type"].tolist())
     contract_map  = upsert_lookup_table(session, ContractType,df["contract_type"].tolist())
-
     # 3) Crear instancias de Worker y persistir
-    count_new = 0
+    # 3️⃣ Convertir el DataFrame a una lista de diccionarios compatibles con el modelo Worker
+    workers_data = []
     for row in df.to_dict(orient="records"):
-        data = {
-            "document":        str(row["document"]),
-            "name":            row["name"],
-            "role_id":         role_map.get(row["role"]),
-            "status_id":       status_map.get(row["status"]),
-            "campaign_id":     campaign_map.get(row["campaign"]),
-            "team_id":         team_map.get(row["team"]),
-            "manager":         row.get("manager"),
-            "supervisor":      row.get("supervisor"),
-            "coordinator":     row.get("coordinator"),
-            "work_type_id":    worktype_map.get(row["work_type"]),
-            "start_date":      safe_date(row.get("start_date")),
-            "termination_date":safe_date(row.get("termination_date")),
-            "contract_type_id":contract_map.get(row["contract_type"]),
-            "requirement_id":  row.get("requirement_id"),
-            "api_id":     row.get("api_id"),
-            "api_name":   row.get("api_name"),
-            "api_email":  row.get("api_email"),
-            "observation_1":   row.get("observation_1"),
-            "observation_2":   row.get("observation_2"),
-            "tenure":          row.get("tenure"),
-            "trainee":         row.get("trainee"),
-        }
-        # 1) Hacer el SELECT para ver si existe
-        stmt = select(Worker).where(Worker.document == str(row["document"]))
-        existing = session.exec(stmt).first()
+        workers_data.append({
+            "document": str(row["document"]),
+            "name": row["name"],
+            "role_id": role_map.get(row["role"]),
+            "status_id": status_map.get(row["status"]),
+            "campaign_id": campaign_map.get(row["campaign"]),
+            "team_id": team_map.get(row["team"]),
+            "manager": row.get("manager"),
+            "supervisor": row.get("supervisor"),
+            "coordinator": row.get("coordinator"),
+            "work_type_id": worktype_map.get(row["work_type"]),
+            "start_date": safe_date(row.get("start_date")),
+            "termination_date": safe_date(row.get("termination_date")),
+            "contract_type_id": contract_map.get(row["contract_type"]),
+            "requirement_id": row.get("requirement_id"),
+            "api_id": row.get("api_id"),
+            "api_name": row.get("api_name"),
+            "api_email": row.get("api_email"),
+            "observation_1": row.get("observation_1"),
+            "observation_2": row.get("observation_2"),
+            "tenure": row.get("tenure"),
+            "trainee": row.get("trainee"),
+        })
 
-        # 2) Si existe, limpiar horarios viejos
-        if existing:
-            existing.schedules.clear()
-            existing.ubycall_schedules.clear()  
+    # 4️⃣ Upsert masivo
+    total_processed = bulk_upsert_workers(session, workers_data)
 
-        # 3) Upsert de Worker (insert o update de campos)
-        worker = upsert_worker(session, data)
-        # Puedes opcionalmente contar sólo nuevos:
-        if session.is_modified(worker, include_collections=False) and not getattr(worker, "id", None):
-            count_new += 1
-
-    session.commit()
-    return len(df)
+    logging.info(f"Total de registros procesados: {total_processed}")
+    return total_processed

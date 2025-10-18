@@ -1,26 +1,53 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # <-- Importar middleware CORS
-from sqlmodel import select
-from typing import Annotated
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from sqlmodel import Session
-from app.database.database import get_session, create_db_and_tables
-from app.routers import worker
-from app.routers import operational_view
-from app.routers import schedule, auth, protected
-from app.routers import google_sheets_proxy, planned, users, attendance
+from typing import Annotated
+from app.database.database import get_session
+from app.database.migrate import run_migrations
+from app.routers import (
+    worker,
+    operational_view,
+    schedule,
+    auth,
+    protected,
+    google_sheets_proxy,
+    planned,
+    users,
+    attendance,
+)
 
-# Iniciar FastAPI
-app = FastAPI()
+# --- Nueva forma recomendada: lifespan ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("▶ Ejecutando migraciones de base de datos...")
+    run_migrations()
+    print("✅ Migraciones completadas.")
+    yield  # Aquí inicia la app
+    print("🛑 Cerrando aplicación...")  # Aquí puedes liberar recursos si deseas
 
-# Configuración CORS
+
+# Crear la aplicación con lifespan
+app = FastAPI(
+    title="GTR CX Backend",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4321", "https://gtr-cx-glovo-es.netlify.app", "*"], 
+    allow_origins=[
+        "http://localhost:4321",
+        "https://gtr-cx-glovo-es.netlify.app",
+        "*",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Registrar routers
 app.include_router(worker.router)
 app.include_router(operational_view.router)
 app.include_router(schedule.router)
@@ -31,13 +58,5 @@ app.include_router(planned.router)
 app.include_router(users.router)
 app.include_router(attendance.router)
 
-# Crear la base de datos y las tablas cuando se inicia la aplicación
-create_db_and_tables()  # Llamada inicial
-
-# Dependencia para obtener la sesión de la base de datos
+# Dependencia para obtener la sesión
 SessionDep = Annotated[Session, Depends(get_session)]
-
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}

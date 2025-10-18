@@ -72,11 +72,11 @@ async def process_and_persist_attendance(
             )
         ).first()
 
-        print(f"\n--- Procesando {api_email} ---")
-        if schedule:
-            print(f"Horario: {schedule.start_time} - {schedule.end_time}")
-        else:
-            print("⚠️ No se encontró schedule para este trabajador")
+        # print(f"\n--- Procesando {api_email} ---")
+        # if schedule:
+        #     print(f"Horario: {schedule.start_time} - {schedule.end_time}")
+        # else:
+        #     print("⚠️ No se encontró schedule para este trabajador")
 
         check_in = None
         if schedule and schedule.start_time and hasattr(row, "check_in_times"):
@@ -87,8 +87,8 @@ async def process_and_persist_attendance(
                     possible_checkins,
                     key=lambda t: abs((datetime.combine(date_row, t) - start_dt).total_seconds())
                 )
-                print(f"Posibles check-ins: {possible_checkins}")
-                print(f"Check-in elegido: {check_in}")
+                # print(f"Posibles check-ins: {possible_checkins}")
+                # print(f"Check-in elegido: {check_in}")
             else:
                 print("⚠️ Sin check-ins disponibles")
 

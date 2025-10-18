@@ -24,10 +24,10 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
 
         # Filtrar ONLINE/ASSIGNED TASK/AVAILABLE
         online = group[
-            (group["State"].str.upper() == "ONLINE") |
-            (group["State"].str.upper() == "ASSIGNED TASK") |
-            (group["State"].str.upper() == "ONLINE CALLS") |
-            (group["State"].str.upper().str.contains("AVAILABLE", regex=False))
+            (group["State"].str.upper() != "OFFLINE") 
+            # (group["State"].str.upper() == "ASSIGNED TASK") |
+            # (group["State"].str.upper() == "ONLINE CALLS") |
+            # (group["State"].str.upper().str.contains("AVAILABLE", regex=False))
         ]
         # Filtrar OFFLINE
         offline = group[group["State"].str.upper() == "OFFLINE"]

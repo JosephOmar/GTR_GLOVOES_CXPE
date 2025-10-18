@@ -12,8 +12,8 @@ connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
 # Función para crear las tablas
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+# def create_db_and_tables():
+#     SQLModel.metadata.create_all(engine)
 
 # Función para obtener la sesión de base de datos
 def get_session() -> Generator[Session, None, None]:

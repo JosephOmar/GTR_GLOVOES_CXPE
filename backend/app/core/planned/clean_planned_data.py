@@ -1,15 +1,17 @@
 import pandas as pd
 from datetime import datetime, timedelta
-from app.core.utils.real_data_view.columns_names import (
-    TEAM, DATE, INTERVAL, FORECAST_RECEIVED, REQUIRED_AGENTS, SCHEDULED_AGENTS
+import math
+from app.core.utils.planned.columns_names import (
+    TEAM, DATE, INTERVAL, FORECAST_RECEIVED, REQUIRED_AGENTS, SCHEDULED_AGENTS, FORECAST_THT
 )
 
 COLUMNS_PLANNED_DATA = {
     'Servicio': TEAM,
     'Fecha': DATE,
     'Intervalo': INTERVAL,
+    'Pronostico-THT' : FORECAST_THT,
     'Pronostico-Recibidas': FORECAST_RECEIVED,
-    'RAC_s Planificados Logueados': REQUIRED_AGENTS,
+    'RAC_s Planificados Disponibles': REQUIRED_AGENTS,
     'Programado Disponible + Ubycall/ Schedule workload': SCHEDULED_AGENTS,
 }
 
@@ -18,11 +20,8 @@ COLUMNS_TEAMS = {
     'CUSTOMER TIER2': 'CUSTOMER TIER2',
     'RIDER TIER1': 'RIDER TIER1',
     'RIDER TIER2': 'RIDER TIER2',
-    'VENDOR TIER1': 'VENDOR CALL',
-    'VENDOR TIER2': 'VENDOR MAIL',
-    'PARTNERCALL': 'VENDOR TIER1',
-    'MAIL PARTNER': 'VENDOR TIER2',
-
+    'VENDOR TIER1': 'VENDOR TIER1',
+    'VENDOR TIER2': 'VENDOR TIER2',
 }
 
 def normalize_time(value: str) -> str:
@@ -42,16 +41,16 @@ def normalize_time(value: str) -> str:
     except Exception:
         return None
 
-def round_to_hour(value: str) -> str:
-    """
-    Redondea los intervalos de 30 min a la hora exacta hacia abajo.
-    Ejemplo: 00:00 -> 00:00, 00:30 -> 00:00, 01:30 -> 01:00
-    """
-    try:
-        t = datetime.strptime(value, "%H:%M")
-        return t.replace(minute=0).strftime("%H:%M")
-    except Exception:
-        return None
+# def round_to_hour(value: str) -> str:
+#     """
+#     Redondea los intervalos de 30 min a la hora exacta hacia abajo.
+#     Ejemplo: 00:00 -> 00:00, 00:30 -> 00:00, 01:30 -> 01:00
+#     """
+#     try:
+#         t = datetime.strptime(value, "%H:%M")
+#         return t.replace(minute=0).strftime("%H:%M")
+#     except Exception:
+#         return None
 
 def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     # Renombramos columnas
@@ -67,7 +66,7 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     # Rango de fechas: dia actual → 1 día después
     current_day = datetime.today().date()
     start_date = current_day
-    end_date = current_day + timedelta(days=3)
+    end_date = current_day + timedelta(days=6)
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
 
@@ -80,16 +79,18 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     # Reemplazo de nombres de equipos
     data[TEAM] = data[TEAM].replace(COLUMNS_TEAMS)
 
-    # Agrupación por TEAM, DATE, HORA
-    agg_funcs = {
-        FORECAST_RECEIVED: "sum",
-        REQUIRED_AGENTS: "max",
-        SCHEDULED_AGENTS: "max",
-    }
+    data[REQUIRED_AGENTS] = data[REQUIRED_AGENTS].apply(lambda x:round(x))
 
-    data = (
-        data.groupby([TEAM, DATE, INTERVAL], as_index=False)
-            .agg(agg_funcs)
-    )
+    # # Agrupación por TEAM, DATE, HORA
+    # agg_funcs = {
+    #     FORECAST_RECEIVED: "sum",
+    #     REQUIRED_AGENTS: "max",
+    #     SCHEDULED_AGENTS: "max",
+    # }
 
+    # data = (
+    #     data.groupby([TEAM, DATE, INTERVAL], as_index=False)
+    #         .agg(agg_funcs)
+    # )
+    
     return data

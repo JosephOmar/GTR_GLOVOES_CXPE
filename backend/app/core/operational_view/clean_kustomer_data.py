@@ -1,5 +1,5 @@
 import pandas as pd
-from app.core.utils.real_data_view.columns_names import TEAM, TIME_INTERVAL, SAT_SAMPLES, SAT_ONGOING, SAT_INTERVAL, SAT_PROMOTERS
+from app.core.utils.planned.columns_names import TEAM, TIME_INTERVAL, SAT_SAMPLES, SAT_ONGOING, SAT_INTERVAL, SAT_PROMOTERS
 
 COLUMNS_KUSTOMER_DATA = {
     'DateTime': TIME_INTERVAL,

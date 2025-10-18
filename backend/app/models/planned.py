@@ -8,6 +8,7 @@ class Planned(SQLModel, table=True):
     team: str
     date: Optional[date]
     interval: str = Field(max_length=10)
+    forecast_tht: Optional[int] = Field(default=0)
     forecast_received: Optional[int] = Field(default=0)
     required_agents: Optional[int] = Field(default=0)
     scheduled_agents: Optional[int] = Field(default=0)
