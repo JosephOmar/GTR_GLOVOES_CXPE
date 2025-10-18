@@ -23,6 +23,8 @@ COLUMNS_PEOPLE_CONSULTATION = {
     "APELLIDO MATERNO": MOTHER_LAST_NAME
 }
 
+FILTER_MANAGEMENT = ['CAPACITACION', 'EXPERIENCIA CLIENTE', 'GERENCIA 1', 'GLOVO']
+
 COLUMNS_TEAM = {
     "CHAT USER ESPAÑA": CHAT_CUSTOMER,
     "ID VERIFY + PAYMENT ES ": CHAT_CUSTOMER,
@@ -79,9 +81,9 @@ def clean_people_consultation(data_active: pd.DataFrame, data_inactive: pd.DataF
 
     data = data[worker_active | worker_inactive]
     # Filtrar solo workers con team requerida
-    team_values = list(COLUMNS_TEAM.keys())
+    # team_values = list(COLUMNS_TEAM.keys())
 
-    data = data[data[TEAM].isin(team_values)]
+    data = data[data[CAMPAIGN].isin(FILTER_MANAGEMENT)]
 
     # Renombrar Team
     data[TEAM] = data[TEAM].replace(COLUMNS_TEAM)
