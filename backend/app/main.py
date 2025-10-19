@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlmodel import Session
+import logging
+import sys
 from typing import Annotated
 from app.database.database import get_session
 from app.database.migrate import run_migrations
@@ -15,6 +17,12 @@ from app.routers import (
     planned,
     users,
     attendance,
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 
 # --- Nueva forma recomendada: lifespan ---

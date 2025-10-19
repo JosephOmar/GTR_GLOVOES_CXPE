@@ -5,17 +5,22 @@ from fastapi import HTTPException, UploadFile
 from typing import List
 from datetime import date, timedelta
 from sqlmodel import Session, select, delete, and_
+import logging
+import time  # ✅ para medir duración
+import traceback
 
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_schedule import validate_excel_schedule
 from app.core.workers_schedule.schedule_concentrix import schedule_concentrix
 from app.core.workers_schedule.schedule_ubycall import schedule_ubycall
-from app.models.worker import Worker
-from app.models.worker import Schedule, UbycallSchedule
+from app.models.worker import Worker, Schedule, UbycallSchedule
 from app.core.utils.workers_cx.columns_names import (
     DOCUMENT, DATE, START_TIME, END_TIME,
     DAY, BREAK_START, BREAK_END, REST_DAY
 )
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 async def process_and_persist_schedules(
     files: List[UploadFile],
@@ -23,115 +28,115 @@ async def process_and_persist_schedules(
     week: int | None = None,
     year: int | None = None,
 ) -> dict:
-    # 1) Leer los Excels
     try:
-        df_conc_raw, people_obs_raw, df_uby_raw = await handle_file_upload_generic(
-            files=files,
-            validator=validate_excel_schedule,
-            keyword_to_slot={
-                "schedule_concentrix": "schedule_concentrix",
-                "people_obs": "people_obs",
-                "schedule_ubycall":   "schedule_ubycall"
-            },
-            required_slots=["schedule_concentrix", "people_obs", "schedule_ubycall"],
-            post_process=lambda conc, people, uby: (conc, people, uby)
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        start_time = time.perf_counter()  # ⏱️ Inicio total
 
-    # 2) Calcular fechas de semana actual (o pasada por parámetro)
-    today = date.today()
-    year = year or today.year
-    week = week or today.isocalendar()[1]
-
-    # Lunes y domingo de la semana “activa”
-    monday_curr = date.fromisocalendar(year, week, 1)
-    sunday_curr = monday_curr + timedelta(days=6)
-    # Lunes de la semana anterior
-    monday_prev = monday_curr - timedelta(days=7)
-
-    # 3) Purga:
-    #  3.1) elimina TODO lo anterior a monday_prev
-    session.exec(
-        delete(Schedule)
-        .where(Schedule.date < monday_prev)
-    )
-    session.exec(
-        delete(UbycallSchedule)
-        .where(UbycallSchedule.date < monday_prev)
-    )
-    #  3.2) elimina SOLO la semana “activa” (para reemplazarla)
-    session.exec(
-        delete(Schedule)
-        .where(
-            and_(
-                Schedule.date >= monday_curr,
-                Schedule.date <= sunday_curr
+        # 1️⃣ Leer los Excels
+        try:
+            df_conc_raw, people_obs_raw, df_uby_raw = await handle_file_upload_generic(
+                files=files,
+                validator=validate_excel_schedule,
+                keyword_to_slot={
+                    "schedule_concentrix": "schedule_concentrix",
+                    "people_obs": "people_obs",
+                    "schedule_ubycall":   "schedule_ubycall"
+                },
+                required_slots=["schedule_concentrix", "people_obs", "schedule_ubycall"],
+                post_process=lambda conc, people, uby: (conc, people, uby)
             )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # 2️⃣ Calcular semana actual o especificada
+        today = date.today()
+        year = year or today.year
+        week = week or today.isocalendar()[1]
+        monday_curr = date.fromisocalendar(year, week, 1)
+        sunday_curr = monday_curr + timedelta(days=6)
+        monday_prev = monday_curr - timedelta(days=7)
+
+        # 3️⃣ Purga
+        t_purge = time.perf_counter()
+        session.exec(delete(Schedule).where(Schedule.date < monday_prev))
+        session.exec(delete(UbycallSchedule).where(UbycallSchedule.date < monday_prev))
+        session.exec(delete(Schedule).where(and_(Schedule.date >= monday_curr, Schedule.date <= sunday_curr)))
+        session.exec(delete(UbycallSchedule).where(and_(UbycallSchedule.date >= monday_curr, UbycallSchedule.date <= sunday_curr)))
+        session.flush()
+        print(f"⏳ Purga completada en {time.perf_counter() - t_purge:.2f} s")
+
+        # 4️⃣ Generar nuevos registros
+        t_gen = time.perf_counter()
+        df_conc = schedule_concentrix(df_conc_raw, people_obs_raw, week=week, year=year)
+        df_uby = schedule_ubycall(df_uby_raw)
+        print(f"📊 Generación de dataframes completada en {time.perf_counter() - t_gen:.2f} s")
+
+        # 5️⃣ Validar documentos existentes
+        t_validate = time.perf_counter()
+        conc_docs = set(df_conc[DOCUMENT].astype(str).str.strip())
+        uby_docs = set(df_uby[DOCUMENT].astype(str).str.strip())
+        all_docs = conc_docs.union(uby_docs)
+
+        existing_docs = set(
+            session.exec(select(Worker.document).where(Worker.document.in_(all_docs))).all()
         )
-    )
-    session.exec(
-        delete(UbycallSchedule)
-        .where(
-            and_(
-                UbycallSchedule.date >= monday_curr,
-                UbycallSchedule.date <= sunday_curr
-            )
-        )
-    )
+        missing_docs = sorted(all_docs - existing_docs)
+        print(f"🔍 Validación de documentos en {time.perf_counter() - t_validate:.2f} s")
 
-    # 4) Generar nuevos registros SOLO para la semana activa
-    df_conc = schedule_concentrix(df_conc_raw, people_obs_raw, week=week, year=year)
-    df_uby  = schedule_ubycall(df_uby_raw)  # si quieres análogo, haz que acepte week/year
+        # 6️⃣ Convertir DataFrame → lista de diccionarios
+        t_prepare = time.perf_counter()
+        conc_records = [
+            {
+                "worker_document": str(row.document).strip(),
+                "date": row.date,
+                "day": row.day,
+                "start_time": row.start_time,
+                "end_time": row.end_time,
+                "break_start": getattr(row, "break_start", None),
+                "break_end": getattr(row, "break_end", None),
+                "is_rest_day": bool(getattr(row, "rest_day", False)),
+                "obs": getattr(row, "obs", None),
+            }
+            for row in df_conc.itertuples(index=False)
+            if str(row.document).strip() in existing_docs
+        ]
 
-    # 5) Validar cuáles documentos existen
-    conc_docs = set(df_conc[DOCUMENT].astype(str).str.strip())
-    uby_docs  = set(df_uby[DOCUMENT].astype(str).str.strip())
-    all_docs  = conc_docs.union(uby_docs)
+        uby_records = [
+            {
+                "worker_document": str(row.document).strip(),
+                "date": row.date,
+                "day": row.day,
+                "start_time": row.start_time,
+                "end_time": row.end_time,
+            }
+            for row in df_uby.itertuples(index=False)
+            if str(row.document).strip() in existing_docs
+        ]
+        print(f"🧩 Preparación de registros en {time.perf_counter() - t_prepare:.2f} s")
 
-    existing = session.exec(
-        select(Worker.document).where(Worker.document.in_(all_docs))
-    ).all()
-    existing_set = set(existing)
-    missing_docs = sorted(all_docs - existing_set)
+        # 7️⃣ Inserción masiva
+        t_insert = time.perf_counter()
+        if conc_records:
+            session.bulk_insert_mappings(Schedule, conc_records)
+        if uby_records:
+            session.bulk_insert_mappings(UbycallSchedule, uby_records)
+        session.commit()
+        print(f"💾 Inserción masiva completada en {time.perf_counter() - t_insert:.2f} s")
 
-    # 6) Insertar solo los válidos
-    inserted_conc = 0
-    for row in df_conc.itertuples(index=False):
-        doc = str(row.document).strip()
-        if doc not in existing_set:
-            continue
-        session.add(Schedule(
-            worker_document=doc,
-            date=row.date,
-            day=row.day,
-            start_time=row.start_time,
-            end_time=row.end_time,
-            break_start=row.break_start,
-            break_end=row.break_end,
-            is_rest_day=bool(row.rest_day),
-            obs = row.obs,
-        ))
-        inserted_conc += 1
+        # 🧾 Cálculo total
+        total_time = time.perf_counter() - start_time
+        inserted_conc = len(conc_records)
+        inserted_uby = len(uby_records)
 
-    inserted_uby = 0
-    for row in df_uby.itertuples(index=False):
-        doc = str(row.document).strip()
-        if doc not in existing_set:
-            continue
-        session.add(UbycallSchedule(
-            worker_document=doc,
-            date=row.date,
-            day=row.day,
-            start_time=row.start_time,
-            end_time=row.end_time,
-        ))
-        inserted_uby += 1
+        print(f"✅ Total: {inserted_conc} Concentrix | {inserted_uby} Ubycall")
+        print(f"🕒 Tiempo total de proceso: {total_time:.2f} segundos")
 
-    session.commit()
-
-    return {
-        "inserted_concentrix": inserted_conc,
-        "inserted_ubycall":   inserted_uby,
-        "missing_workers":    missing_docs
-    }
+        return {
+            "inserted_concentrix": inserted_conc,
+            "inserted_ubycall": inserted_uby,
+            "missing_workers": missing_docs,
+            "time_seconds": round(total_time, 2),
+        }
+    except Exception as e: 
+        print("❌ Error inesperado en process_and_persist_schedules:")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")

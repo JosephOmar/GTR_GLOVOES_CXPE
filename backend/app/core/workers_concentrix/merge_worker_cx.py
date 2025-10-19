@@ -115,37 +115,65 @@ def merge_with_despegando(df_final_worker: pd.DataFrame, df_despegando: pd.DataF
 
     return merged
 
-def generate_worker_cx_table(people_active: pd.DataFrame, people_inactive: pd.DataFrame, scheduling_ppp: pd.DataFrame, api_id: pd.DataFrame) -> pd.DataFrame:
+def generate_worker_cx_table(
+    people_active: pd.DataFrame,
+    people_inactive: pd.DataFrame,
+    scheduling_ppp: pd.DataFrame,
+    api_id: pd.DataFrame
+) -> pd.DataFrame:
+    """Genera la tabla final de trabajadores de Concentrix (optimizada y con control de tipos)."""
 
+    # --- Limpieza y normalización inicial
     df_people_consultation = clean_people_consultation(people_active, people_inactive)
     df_scheduling_ppp = clean_scheduling_ppp(scheduling_ppp)
-    
+
+    # --- Normalización de columnas en api_id (ANTES de convertir tipos)
     api_id = api_id.rename(columns={
         'DOCUMENT': DOCUMENT,
         'API EMAIL': API_EMAIL,
         'API ID': API_ID
     })
     api_id = api_id[[DOCUMENT, API_EMAIL, API_ID]]
+
+    # --- Asegurar tipo string en todas las fuentes (AHORA sí funciona)
+    for df in [df_people_consultation, df_scheduling_ppp, api_id]:
+        if DOCUMENT in df.columns:
+            df[DOCUMENT] = (
+                df[DOCUMENT]
+                .astype(str)
+                .str.replace(r"\.0$", "", regex=True)
+                .str.strip()
+            )
+
+    # --- Merge 1: people + scheduling
     df_people_and_ppp = merge_worker_data(df_people_consultation, df_scheduling_ppp)
 
+    # --- Ajustar TEAM
     df_people_and_ppp[TEAM] = df_people_and_ppp[TEAM].replace({
-       'CUSTOMER TIER1' : 'CUSTOMER TIER1',
-       'RIDER TIER1' : 'RIDER TIER1',
-       'VENDOR TIER1' : 'VENDOR CALL',
-       'CUSTOMER TIER2': 'CUSTOMER TIER2',
-       'RIDER TIER2': 'RIDER TIER2',
-       'VENDOR TIER2': 'VENDOR MAIL',
-       'MIGRADOS VENDOR' : 'VENDOR TIER1',
-       'RUBIK VENDOR' : 'VENDOR TIER2',
+        'CUSTOMER TIER1': 'CUSTOMER TIER1',
+        'RIDER TIER1': 'RIDER TIER1',
+        'VENDOR TIER1': 'VENDOR CALL',
+        'CUSTOMER TIER2': 'CUSTOMER TIER2',
+        'RIDER TIER2': 'RIDER TIER2',
+        'VENDOR TIER2': 'VENDOR MAIL',
+        'MIGRADOS VENDOR': 'VENDOR TIER1',
+        'RUBIK VENDOR': 'VENDOR TIER2',
     })
 
+    # --- Merge 2: con api_id (ahora todos tienen document como str)
     df_final_worker = pd.merge(
         df_people_and_ppp,
         api_id,
         on=DOCUMENT,
         how="left"
     )
-    
-    df_final_worker = update_column_based_on_worker(df_final_worker, df_people_consultation, SUPERVISOR, NAME)
-    
+
+    # --- Actualizar supervisor con nombres limpios
+    df_final_worker = update_column_based_on_worker(
+        df_final_worker,
+        df_people_consultation,
+        SUPERVISOR,
+        NAME
+    )
+
     return df_final_worker

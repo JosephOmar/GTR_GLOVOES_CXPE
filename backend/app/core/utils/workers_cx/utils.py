@@ -17,32 +17,44 @@ def normalize_name_sorted(name: str) -> str:
     return " ".join(name_parts).title()
 
 # Función para actualizar los nombres en una columna basándose en la columna 'WORKER'
-def update_column_based_on_worker(dataframe: pd.DataFrame, dataframe2: pd.DataFrame, column_to_update: str, worker_column: str) -> pd.DataFrame:
-    mapping_dict = {}
+def update_column_based_on_worker(
+    df_target: pd.DataFrame,
+    df_reference: pd.DataFrame,
+    column_to_update: str,
+    reference_column: str,
+    score_threshold: int = 90
+) -> pd.DataFrame:
+    # Extraer valores únicos válidos
+    ref_values = df_reference[reference_column].dropna().unique().tolist()
+    target_values = df_target[column_to_update].dropna().unique().tolist()
 
-    # normalizar a minúsculas
-    worker_values = dataframe2[worker_column].dropna().unique()
-    worker_lower = [w.lower() for w in worker_values]
+    if not ref_values or not target_values:
+        return df_target  # nada que hacer
 
-    for value in dataframe[column_to_update].dropna().unique():
-        value_lower = value.lower()
+    # Normalizar
+    ref_lower = [r.lower().strip() for r in ref_values]
+    tgt_lower = [t.lower().strip() for t in target_values]
 
-        result = process.extractOne(
-            value_lower,
-            worker_lower,
-            scorer=fuzz.token_sort_ratio  # token_sort_ratio ayuda a comparar nombres con distinto orden
-        )
+    # Matriz de similitudes (vectorizada y paralelizada)
+    sim_matrix = process.cdist(
+        tgt_lower, ref_lower,
+        scorer=fuzz.token_sort_ratio,
+        workers=-1  # usa todos los núcleos disponibles
+    )
 
-        if result:
-            best_match_lower, score, _ = result
+    # Buscar mejor coincidencia por fila
+    best_idx = np.argmax(sim_matrix, axis=1)
+    best_scores = sim_matrix[np.arange(len(tgt_lower)), best_idx]
 
-            if score > 90:
-                # recuperar el valor original (no en minúscula) para reemplazar
-                original = worker_values[worker_lower.index(best_match_lower)]
-                mapping_dict[value] = original
+    # Construir mapa de reemplazo (solo si supera el umbral)
+    mapping = {}
+    for i, score in enumerate(best_scores):
+        if score >= score_threshold:
+            mapping[target_values[i]] = ref_values[best_idx[i]]
 
-    dataframe[column_to_update] = dataframe[column_to_update].replace(mapping_dict)
-    return dataframe
+    # Aplicar reemplazos
+    df_target[column_to_update] = df_target[column_to_update].replace(mapping)
+    return df_target
 
 # ? Limpiar observaciones (NA transformar a vacios)
 def clean_observations(valor):
