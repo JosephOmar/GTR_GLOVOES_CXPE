@@ -47,7 +47,7 @@ async def process_and_persist_schedules(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        # 2️⃣ Calcular semana actual o especificada
+        # 2️⃣ Calcular semana actual o especificada   
         today = date.today()
         year = year or today.year
         week = week or today.isocalendar()[1]

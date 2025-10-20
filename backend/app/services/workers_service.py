@@ -12,6 +12,7 @@ from app.core.workers_concentrix.merge_worker_cx import generate_worker_cx_table
 from app.core.workers_ubycall.merge_worker_ubycall import generate_worker_uby_table
 from app.crud.worker import upsert_lookup_table, bulk_upsert_workers
 from app.models.worker import Role, Status, Campaign, Team, WorkType, ContractType, Worker
+from app.services.utils.files_name import FILES_WORKER_SERVICE
 
 
 def safe_date(value):
@@ -33,55 +34,53 @@ async def process_and_persist_workers(
         """Procesa los archivos Excel de trabajadores y persiste la información en BD con métricas de tiempo."""
         start_total = time.perf_counter()
 
-        if not files:
-            raise HTTPException(status_code=422, detail="No files uploaded")
-
-        print("📂 Archivos recibidos:")
-        for file in files:
-            print(f"   - {file.filename}")
-
         # 🕒 Tiempo 1: Lectura y concatenación
         t1 = time.perf_counter()
-        df = await handle_file_upload_generic(
+        people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall = await handle_file_upload_generic(
             files=files,
             validator=validate_excel_workers,
-            keyword_to_slot={
-                "people_active": "people_active",
-                "people_inactive": "people_inactive",
-                "scheduling_ppp": "scheduling_ppp",
-                "api_id": "api_id",
-                "master_glovo": "master_glovo",
-                "scheduling_ubycall": "scheduling_ubycall",
-            },
-            required_slots=["people_active", "people_inactive", "scheduling_ppp", "api_id"],
-            post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, **slots: pd.concat([
-                generate_worker_cx_table(people_active, people_inactive, scheduling_ppp, api_id),
-                generate_worker_uby_table(
-                    slots["master_glovo"],
-                    slots["scheduling_ubycall"],
-                    api_id,
-                    people_active,
-                    people_inactive,
-                )
-            ])
+            keyword_to_slot=FILES_WORKER_SERVICE,
+            required_slots=list(FILES_WORKER_SERVICE.values()),
+            post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall: (
+                people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall)
         )
         t2 = time.perf_counter()
-        print(f"📊 Lectura y unión de data completada en {t2 - t1:.2f} s")
+        print(f"📊 Lectura de archivos excel {t2 - t1:.2f} s")
+
+        df_concentrix = generate_worker_cx_table(people_active, people_inactive,scheduling_ppp, api_id)
+
+        t3 = time.perf_counter()
+        print(f"📊 Lectura y limpieza de df_concentrix {t3 - t2:.2f} s")
+
+        df_ubycall = generate_worker_uby_table(master_glovo, scheduling_ubycall, api_id, people_active, people_inactive)
+
+        t4 = time.perf_counter()
+        print(f"📊 Lectura y limpieza de df_ubycall {t4 - t3:.2f} s")
+
+        df = pd.concat([df_concentrix, df_ubycall], ignore_index=True)
 
         # 🕒 Tiempo 2: Mapeo de tablas lookup
-        t3 = time.perf_counter()
+        t5 = time.perf_counter()
+        print(f"📊 Unión de df_cx y df_uby {t5 - t4:.2f} s")
+
         df = df.where(pd.notnull(df), None)
-        role_map      = upsert_lookup_table(session, Role,       df["role"].tolist())
-        status_map    = upsert_lookup_table(session, Status,     df["status"].tolist())
-        campaign_map  = upsert_lookup_table(session, Campaign,   df["campaign"].tolist())
-        team_map      = upsert_lookup_table(session, Team,       df["team"].tolist())
-        worktype_map  = upsert_lookup_table(session, WorkType,   df["work_type"].tolist())
-        contract_map  = upsert_lookup_table(session, ContractType, df["contract_type"].tolist())
-        t4 = time.perf_counter()
-        print(f"🧩 Mapeo de tablas lookup completado en {t4 - t3:.2f} s")
+        role_map = upsert_lookup_table(
+            session, Role,       df["role"].tolist())
+        status_map = upsert_lookup_table(
+            session, Status,     df["status"].tolist())
+        campaign_map = upsert_lookup_table(
+            session, Campaign,   df["campaign"].tolist())
+        team_map = upsert_lookup_table(
+            session, Team,       df["team"].tolist())
+        worktype_map = upsert_lookup_table(
+            session, WorkType,   df["work_type"].tolist())
+        contract_map = upsert_lookup_table(
+            session, ContractType, df["contract_type"].tolist())
+        t6 = time.perf_counter()
+        print(f"🧩 Mapeo de tablas lookup completado en {t6 - t5:.2f} s")
 
         # 🕒 Tiempo 3: Preparación de registros
-        t5 = time.perf_counter()
+        t7 = time.perf_counter()
         workers_data = []
         for row in df.to_dict(orient="records"):
             workers_data.append({
@@ -107,14 +106,14 @@ async def process_and_persist_workers(
                 "tenure": row.get("tenure"),
                 "trainee": row.get("trainee"),
             })
-        t6 = time.perf_counter()
-        print(f"🧮 Preparación de registros completada en {t6 - t5:.2f} s")
+        t8 = time.perf_counter()
+        print(f"🧮 Preparación de registros completada en {t8 - t7:.2f} s")
 
         # 🕒 Tiempo 4: Inserción masiva
-        t7 = time.perf_counter()
+        t9 = time.perf_counter()
         total_processed = bulk_upsert_workers(session, workers_data)
-        t8 = time.perf_counter()
-        print(f"💾 Inserción masiva completada en {t8 - t7:.2f} s")
+        t10 = time.perf_counter()
+        print(f"💾 Inserción masiva completada en {t10 - t9:.2f} s")
 
         # 🕒 Tiempo total
         total_time = time.perf_counter() - start_total
@@ -123,7 +122,8 @@ async def process_and_persist_workers(
 
         return total_processed
 
-    except Exception as e: 
+    except Exception as e:
         print("❌ Error inesperado en process_and_persist_schedules:")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal error: {str(e)}")
