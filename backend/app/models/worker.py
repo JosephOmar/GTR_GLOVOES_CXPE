@@ -120,7 +120,7 @@ class Attendance(SQLModel, table=True):
     Registro real de asistencia del trabajador:
     - Marca de entrada y salida.
     - Si asistió o no al turno planificado.
-    - Observaciones de puntualidad, faltas, etc.
+    - Observaciones de puntualidad, faltas, etc.    
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     api_email: str = Field(foreign_key="worker.api_email")
@@ -129,10 +129,9 @@ class Attendance(SQLModel, table=True):
     check_in: Optional[time] = None
     check_out: Optional[time] = None
     status: str = Field(default="absent")  
+    out_of_adherence: Optional[int] = Field(default=None)
+    offline_minutes: Optional[int] = Field(default=None)
     # Ej: "present", "absent", "late", "early_leave"
-
-    notes: Optional[str] = Field(default=None, max_length=255, nullable=True)
-
     # Relación con Worker
     worker: Worker = Relationship(back_populates="attendances")
 

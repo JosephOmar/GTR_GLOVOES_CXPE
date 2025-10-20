@@ -28,9 +28,8 @@ class AttendanceRead(SQLModel):
     check_in: Optional[time]
     check_out: Optional[time]
     status: str
-    notes: Optional[str] = None
-
-
+    out_of_adherence: Optional[float] = None
+    offline_minutes: Optional[float] = None
 # ----------------------
 # Worker schema principal
 # ----------------------
