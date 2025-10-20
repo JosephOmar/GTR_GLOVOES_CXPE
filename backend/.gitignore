@@ -3,5 +3,7 @@
 .env
 .env.production
 
-alembic/
-alembic.ini
+alembic/__pycache__/
+__pycache__/
+*.pyc
+.venv/
