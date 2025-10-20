@@ -105,6 +105,7 @@ async def process_and_persist_workers(
                 "observation_2": row.get("observation_2"),
                 "tenure": row.get("tenure"),
                 "trainee": row.get("trainee"),
+                "productive": row.get("productive")
             })
         t8 = time.perf_counter()
         print(f"🧮 Preparación de registros completada en {t8 - t7:.2f} s")

@@ -1,6 +1,6 @@
 import pandas as pd
 from app.core.utils.workers_cx.utils import clean_observations
-from app.core.utils.workers_cx.columns_names import DOCUMENT, OBSERVATION_1, OBSERVATION_2, TEAM, REQUIREMENT_ID, SUPERVISOR
+from app.core.utils.workers_cx.columns_names import DOCUMENT, OBSERVATION_1, OBSERVATION_2, TEAM, REQUIREMENT_ID, SUPERVISOR, PRODUCTIVE
 
 COLUMNS_SCHEDULING_PPP = {
     "DNI": DOCUMENT,
@@ -9,7 +9,8 @@ COLUMNS_SCHEDULING_PPP = {
     "Observaciones 2°": OBSERVATION_2,
     # "Usuarios" : api_email,
     "id" : REQUIREMENT_ID,
-    "SUPERVISOR" : SUPERVISOR
+    "SUPERVISOR" : SUPERVISOR,
+    "Productivo": PRODUCTIVE
 }
 
 REQUIRED_COLUMNS = list(COLUMNS_SCHEDULING_PPP.keys())
@@ -34,6 +35,6 @@ def clean_scheduling_ppp(data: pd.DataFrame) -> pd.DataFrame:
     data[OBSERVATION_2] = data[OBSERVATION_2].astype(str).str.strip().apply(clean_observations)
 
     # 🧽 Mantener solo las columnas necesarias
-    data = data[[DOCUMENT,TEAM, REQUIREMENT_ID, SUPERVISOR, OBSERVATION_1, OBSERVATION_2]]
+    data = data[[DOCUMENT,TEAM, REQUIREMENT_ID, SUPERVISOR, OBSERVATION_1, OBSERVATION_2, PRODUCTIVE]]
 
     return data

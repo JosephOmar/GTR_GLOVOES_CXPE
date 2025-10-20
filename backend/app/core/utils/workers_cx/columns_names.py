@@ -20,6 +20,7 @@ TENURE = "tenure"
 TRAINEE = 'trainee'
 OBSERVATION_1 = 'observation_1'
 OBSERVATION_2 = 'observation_2'
+PRODUCTIVE = 'productive'
 
 #DATA PEOPLE
 EMPLOYEE_NAME = "employee_name"

@@ -62,6 +62,7 @@ class Worker(SQLModel, table=True):
     observation_2: Optional[str] = Field(default=None, max_length=60)
     tenure: Optional[int] = Field(default=None)
     trainee: Optional[str] = Field(default=None, max_length=20)
+    productive: Optional[str] = Field(default='No')
 
     # Relación uno a muchos con Role
     role: "Role" = Relationship(back_populates="workers")

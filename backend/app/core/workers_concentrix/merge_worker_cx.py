@@ -152,12 +152,10 @@ def generate_worker_cx_table(
     df_people_and_ppp[TEAM] = df_people_and_ppp[TEAM].replace({
         'CUSTOMER TIER1': 'CUSTOMER TIER1',
         'RIDER TIER1': 'RIDER TIER1',
-        'VENDOR TIER1': 'VENDOR CALL',
+        'VENDOR TIER1': 'VENDOR TIER1',
         'CUSTOMER TIER2': 'CUSTOMER TIER2',
         'RIDER TIER2': 'RIDER TIER2',
-        'VENDOR TIER2': 'VENDOR MAIL',
-        'MIGRADOS VENDOR': 'VENDOR TIER1',
-        'RUBIK VENDOR': 'VENDOR TIER2',
+        'VENDOR TIER2': 'VENDOR TIER2',
     })
 
     # --- Merge 2: con api_id (ahora todos tienen document como str)
