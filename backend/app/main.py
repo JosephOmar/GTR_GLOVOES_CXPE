@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlmodel import Session
 import logging
+import traceback
 import sys
 from typing import Annotated
 from app.database.database import get_session
@@ -25,6 +26,11 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
+logging.getLogger("uvicorn.error").setLevel(logging.DEBUG)
+logging.getLogger("uvicorn.access").setLevel(logging.DEBUG)
+logging.getLogger("fastapi").setLevel(logging.DEBUG)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO) 
+
 # --- Nueva forma recomendada: lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,13 +40,24 @@ async def lifespan(app: FastAPI):
     yield  # Aquí inicia la app
     print("🛑 Cerrando aplicación...")  # Aquí puedes liberar recursos si deseas
 
-
 # Crear la aplicación con lifespan
 app = FastAPI(
     title="GTR CX Backend",
     version="1.0.0",
+    debug=True,
     lifespan=lifespan,
 )
+
+@app.middleware("http")
+async def log_exceptions(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        print("🔥 ERROR DETECTADO EN MIDDLEWARE GLOBAL 🔥")
+        print("Ruta:", request.url.path)
+        print(traceback.format_exc())
+        raise e  # vuelve a lanzar el error para que Uvicorn lo muestre
 
 # Configurar CORS
 app.add_middleware(
