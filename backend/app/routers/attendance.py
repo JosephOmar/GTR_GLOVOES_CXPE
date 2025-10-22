@@ -28,8 +28,7 @@ async def upload_attendance(
     """
     
     try:
-        print(target_date)
-        print('data of router')
+
         logging.info("📂 Iniciando carga de asistencia...")
         result = await process_and_persist_attendance(
             file=file,

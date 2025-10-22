@@ -147,12 +147,13 @@ async def process_and_persist_attendance(
             # --- CHECK-OUT ---
 
             current_time = datetime.now()
-
+            
             valid_check_out_times = [
                 check_out for check_out in check_out_times
                 if datetime.combine(date_row, check_out[0]) > start_datetime
-                and datetime.combine(date_row, check_out[0]) <= end_datetime + timedelta(hours=2)
+                and datetime.combine(date_row, check_out[0])  <= end_datetime + timedelta(hours=3)
             ]
+            
             valid_check_out_times.sort()
 
             if valid_check_out_times:
