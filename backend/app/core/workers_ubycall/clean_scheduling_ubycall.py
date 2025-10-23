@@ -19,7 +19,14 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
 
     data = data.rename(columns=COLUMNS_SCHEDULING_UBYCALL)
     # Paso 1: Limpiar la columna 'DNI' eliminando los ceros a la izquierda
-    data[DOCUMENT] = data[DOCUMENT].astype(str).str.lstrip("0").astype(int)
+    data[DOCUMENT] = (
+        data[DOCUMENT]
+        .astype(str)
+        .str.strip()              # elimina espacios
+        .str.replace(r"\.0$", "", regex=True)  # elimina el ".0" final si existe
+        .str.lstrip("0")          # quita ceros a la izquierda
+    )
+    data[DOCUMENT] = pd.to_numeric(data[DOCUMENT], errors="coerce").astype("Int64")
 
     # Paso 2: Capitalizar los nombres en 'NOMBRECOMPLETO'
     data[NAME] = data[NAME].str.title()
