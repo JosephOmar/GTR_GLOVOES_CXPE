@@ -151,9 +151,10 @@ async def process_and_persist_attendance(
             valid_check_out_times = [
                 check_out for check_out in check_out_times
                 if datetime.combine(date_row, check_out[0]) > start_datetime
-                and datetime.combine(date_row, check_out[0])  <= end_datetime + timedelta(hours=3)
+                and datetime.combine(date_row, check_out[0])  <= end_datetime + timedelta(hours=4)
             ]
-            
+            if api_email == 'dlhuaman.whl@service.glovoapp.com':
+                print(valid_check_out_times)
             valid_check_out_times.sort()
 
             if valid_check_out_times:
@@ -172,7 +173,7 @@ async def process_and_persist_attendance(
                     last_valid_check_out = valid_check_out_times[-1]
                     last_time = datetime.combine(date_row, last_valid_check_out[0])
 
-                    if last_time > end_datetime + timedelta(hours=2):
+                    if last_time > end_datetime + timedelta(hours=4):
                         # ❌ No tomarlo (más de 2h tarde)
                         check_out = None
                     else:
