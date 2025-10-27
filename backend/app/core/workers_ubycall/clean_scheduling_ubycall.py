@@ -30,7 +30,7 @@ def clean_scheduling_ubycall(data: pd.DataFrame) -> pd.DataFrame:
 
     # Paso 2: Capitalizar los nombres en 'NOMBRECOMPLETO'
     data[NAME] = data[NAME].str.title()
-
+    
     data = data.drop_duplicates(subset=[NAME])
 
     # Paso 3: Reemplazar los valores en la columna 'CAMPANA' (TEAM)
