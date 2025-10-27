@@ -1,6 +1,6 @@
 from app.core.workers_ubycall.clean_master_glovo import clean_master_glovo
 from app.core.workers_ubycall.clean_scheduling_ubycall import clean_scheduling_ubycall
-from app.core.utils.workers_cx.columns_names import NAME, DOCUMENT, MANAGER, CAMPAIGN, ROLE, WORK_TYPE, CONTRACT_TYPE, TERMINATION_DATE, REQUIREMENT_ID, TRAINEE, OBSERVATION_1, OBSERVATION_2, API_EMAIL, API_ID, API_NAME
+from app.core.utils.workers_cx.columns_names import NAME, DOCUMENT, MANAGER, CAMPAIGN, ROLE, WORK_TYPE, CONTRACT_TYPE, TERMINATION_DATE, REQUIREMENT_ID, TRAINEE, OBSERVATION_1, OBSERVATION_2, API_EMAIL, API_ID, API_NAME, PRODUCTIVE
 import pandas as pd
 import numpy as np
 from app.core.workers_concentrix.merge_worker_cx import merge_by_similar_name
@@ -32,6 +32,7 @@ def generate_worker_uby_table(master_glovo: pd.DataFrame, scheduling_ubycall: pd
     combined_data[TRAINEE] = np.nan
     combined_data[OBSERVATION_1] = np.nan
     combined_data[OBSERVATION_2] = np.nan
+    combined_data[PRODUCTIVE] = 'Si'
 
     #final_data = merge_by_similar_name(combined_data, api_id, NAME, API_NAME)
 
