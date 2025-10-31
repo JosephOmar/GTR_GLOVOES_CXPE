@@ -1,15 +1,17 @@
 from fastapi import APIRouter, UploadFile, Depends, File
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_loader_criteria
 from typing import List
 
 from app.database.database import get_session
 from app.services.workers_service import process_and_persist_workers
 from app.models.worker import Worker
 from app.schemas.worker import WorkerRead
-from datetime import date, timedelta
+from app.models.worker import Schedule, UbycallSchedule
 from app.routers.protected import get_current_user
 from app.models.user import User
+import pytz
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
@@ -31,7 +33,9 @@ async def upload_workers(
 )
 def read_workers(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # Cargamos role, status, campaign, etc. y además schedules y ubycall_schedules
-    #current_day = date.today()
+    peru_tz = timezone(timedelta(hours=-5))
+    current_day = datetime.now(peru_tz).date()
+    previous_day = current_day - timedelta(days=1)
     statement = (
         select(Worker)
         .options(
@@ -43,6 +47,15 @@ def read_workers(session: Session = Depends(get_session), current_user: User = D
             selectinload(Worker.contract_type),
             selectinload(Worker.schedules),
             selectinload(Worker.ubycall_schedules),
+            selectinload(Worker.attendances),
+            with_loader_criteria(
+                Schedule,
+                Schedule.date.in_([current_day, previous_day])
+            ),
+            with_loader_criteria(
+                UbycallSchedule,
+                UbycallSchedule.date.in_([current_day, previous_day])
+            ),
         )
     )
     workers = session.exec(statement).all()
@@ -51,4 +64,4 @@ def read_workers(session: Session = Depends(get_session), current_user: User = D
     #     w.schedules = [s for s in w.schedules if s.date == current_day]
     #     w.ubycall_schedules = [u for u in w.ubycall_schedules if u.date == current_day]
 
-    return workers  
+    return workers
