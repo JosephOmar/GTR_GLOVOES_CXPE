@@ -1,39 +1,25 @@
 from typing import Dict, List, Optional
 from sqlmodel import Session, select
-import logging
+from sqlalchemy.dialects.postgresql import insert
+import math
+from collections import Counter
 
 from app.models.worker import Role, Status, Campaign, Team, WorkType, ContractType, Worker
 
 def upsert_lookup_table(session: Session, Model, values: List[str]) -> Dict[str, int]:
-    """
-    Inserta o actualiza registros de una tabla lookup (como Role, Status, etc.)
-    Devuelve un diccionario: { nombre: id }.
-    Optimizada para operaciones en lote.
-    """
-    # Limpiar valores: quitar duplicados y nulos
     unique_values = {v.strip() for v in values if v and isinstance(v, str)}
     if not unique_values:
         return {}
 
-    # Buscar los ya existentes
-    existing_records = session.exec(
-        select(Model).where(Model.name.in_(unique_values))
-    ).all()
-    existing_map = {rec.name: rec.id for rec in existing_records}
+    # Inserta los valores (si ya existen, ignora)
+    stmt = insert(Model).values([{"name": v} for v in unique_values])
+    stmt = stmt.on_conflict_do_nothing(index_elements=["name"])
+    session.execute(stmt)
+    session.commit()
 
-    # Identificar los nuevos
-    missing_values = unique_values - set(existing_map.keys())
-    new_records = [Model(name=value) for value in missing_values]
-
-    if new_records:
-        session.add_all(new_records)
-        session.flush()  # Asigna IDs sin hacer commit aún
-
-        # Agregar los nuevos al mapa
-        for record in new_records:
-            existing_map[record.name] = record.id
-
-    return existing_map
+    # Retorna el mapeo actualizado
+    all_records = session.exec(select(Model)).all()
+    return {r.name: r.id for r in all_records}
 
 
 def upsert_worker(session: Session, data: dict) -> Worker:
@@ -59,39 +45,72 @@ def upsert_worker(session: Session, data: dict) -> Worker:
 def bulk_upsert_workers(session: Session, workers_data: List[Dict]) -> int:
     """
     Inserta o actualiza múltiples Workers.
-    Devuelve la cantidad total de registros procesados.
+    Maneja conflictos tanto por api_email (cuando existe) como por document (cuando no hay email).
     """
-    documents = [w["document"] for w in workers_data]
-    
-    # Trae todos los Workers existentes en una sola consulta
-    existing_workers = session.exec(select(Worker).where(Worker.document.in_(documents))).all()
-    existing_map = {w.document: w for w in existing_workers}
 
-    count_new = 0
-    count_updated = 0
+    if not workers_data:
+        return 0
 
-    for data in workers_data:
-        doc = data["document"]
-        existing = existing_map.get(doc)
+    # === 0️⃣ Limpieza de NaN ===
+    for w in workers_data:
+        for k, v in w.items():
+            if isinstance(v, float) and math.isnan(v):
+                w[k] = None
 
-        if existing:
-            updated = False
-            for key, value in data.items():
-                if hasattr(existing, key):
-                    current_value = getattr(existing, key)
-                    if current_value != value:
-                        setattr(existing, key, value)
-                        updated = True
+    # === 1️⃣ Detección de duplicados ===
+    pairs = [(w.get("document"), w.get("api_email")) for w in workers_data]
+    duplicates = [pair for pair, count in Counter(pairs).items() if count > 1]
+    if duplicates:
+        print("⚠️ Duplicados encontrados en workers_data:")
+        for d in duplicates:
+            print(f"   → document={d[0]} | api_email={d[1]}")
 
-            if updated:
-                session.add(existing)
-                count_updated += 1
-        else:
-            worker = Worker(**data)
-            session.add(worker)
-            count_new += 1
+        temp_map = {}
+        for w in workers_data:
+            key = (w.get("document"), w.get("api_email"))
+            temp_map[key] = w
+        workers_data = list(temp_map.values())
+        print(f"✅ Duplicados eliminados. Total final: {len(workers_data)} registros.")
 
+    # === 2️⃣ Separar por tipo de clave ===
+    workers_with_email = [w for w in workers_data if w.get("api_email")]
+    workers_without_email = [w for w in workers_data if not w.get("api_email")]
+
+    total_processed = 0
+
+    # === 3️⃣ UPSERT por api_email ===
+    if workers_with_email:
+        stmt = insert(Worker).values(workers_with_email)
+        update_columns = {
+            c.name: c
+            for c in stmt.excluded
+            if c.name not in ("id", "document")
+        }
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["api_email"],
+            set_=update_columns,
+        )
+        session.execute(stmt)
+        total_processed += len(workers_with_email)
+
+    # === 4️⃣ UPSERT por document ===
+    if workers_without_email:
+        stmt2 = insert(Worker).values(workers_without_email)
+        update_columns2 = {
+            c.name: c
+            for c in stmt2.excluded
+            if c.name not in ("id", "api_email")
+        }
+        stmt2 = stmt2.on_conflict_do_update(
+            index_elements=["document"],
+            set_=update_columns2,
+        )
+        session.execute(stmt2)
+        total_processed += len(workers_without_email)
+
+    # === 5️⃣ Confirmar cambios ===
     session.commit()
 
-    logging.info(f"{count_new} nuevos, {count_updated} actualizados.")
-    return count_new + count_updated
+    print(f"✅ Total registros procesados: {total_processed}")
+
+    return total_processed

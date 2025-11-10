@@ -44,24 +44,14 @@ async def process_and_persist_workers(
             post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall: (
                 people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall)
         )
-        t2 = time.perf_counter()
-        print(f"📊 Lectura de archivos excel {t2 - t1:.2f} s")
 
         df_concentrix = generate_worker_cx_table(people_active, people_inactive,scheduling_ppp, api_id)
 
-        t3 = time.perf_counter()
-        print(f"📊 Lectura y limpieza de df_concentrix {t3 - t2:.2f} s")
 
         df_ubycall = generate_worker_uby_table(master_glovo, scheduling_ubycall, api_id, people_active, people_inactive)
 
-        t4 = time.perf_counter()
-        print(f"📊 Lectura y limpieza de df_ubycall {t4 - t3:.2f} s")
 
         df = pd.concat([df_concentrix, df_ubycall], ignore_index=True)
-
-        # 🕒 Tiempo 2: Mapeo de tablas lookup
-        t5 = time.perf_counter()
-        print(f"📊 Unión de df_cx y df_uby {t5 - t4:.2f} s")
 
         df = df.where(pd.notnull(df), None)
         role_map = upsert_lookup_table(
@@ -76,13 +66,18 @@ async def process_and_persist_workers(
             session, WorkType,   df["work_type"].tolist())
         contract_map = upsert_lookup_table(
             session, ContractType, df["contract_type"].tolist())
-        t6 = time.perf_counter()
-        print(f"🧩 Mapeo de tablas lookup completado en {t6 - t5:.2f} s")
 
         # 🕒 Tiempo 3: Preparación de registros
-        t7 = time.perf_counter()
         workers_data = []
         for row in df.to_dict(orient="records"):
+
+            # 🔧 Normalización segura de requirement_id
+            req_id = row.get("requirement_id")
+            if pd.isna(req_id) or req_id is None:
+                req_id = None
+            else:
+                req_id = str(req_id).strip()  # fuerza todo a string limpio
+
             workers_data.append({
                 "document": str(row["document"]),
                 "name": row["name"],
@@ -97,7 +92,7 @@ async def process_and_persist_workers(
                 "start_date": safe_date(row.get("start_date")),
                 "termination_date": safe_date(row.get("termination_date")),
                 "contract_type_id": contract_map.get(row["contract_type"]),
-                "requirement_id": row.get("requirement_id"),
+                "requirement_id": req_id,  # 👈 ahora siempre str o None
                 "api_id": row.get("api_id"),
                 "api_name": row.get("api_name"),
                 "api_email": row.get("api_email"),
@@ -105,21 +100,11 @@ async def process_and_persist_workers(
                 "observation_2": row.get("observation_2"),
                 "tenure": row.get("tenure"),
                 "trainee": row.get("trainee"),
-                "productive": row.get("productive")
+                "productive": row.get("productive"),
             })
-        t8 = time.perf_counter()
-        print(f"🧮 Preparación de registros completada en {t8 - t7:.2f} s")
 
         # 🕒 Tiempo 4: Inserción masiva
-        t9 = time.perf_counter()
         total_processed = bulk_upsert_workers(session, workers_data)
-        t10 = time.perf_counter()
-        print(f"💾 Inserción masiva completada en {t10 - t9:.2f} s")
-
-        # 🕒 Tiempo total
-        total_time = time.perf_counter() - start_total
-        print(f"✅ Total de registros procesados: {total_processed}")
-        print(f"🕒 Tiempo total de proceso: {total_time:.2f} segundos")
 
         return total_processed
 

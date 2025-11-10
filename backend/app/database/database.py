@@ -1,21 +1,31 @@
 from sqlmodel import SQLModel, create_engine, Session
-from app.models.worker import Worker, Role, Status, Campaign, Team, WorkType, ContractType, Attendance, UbycallSchedule, Schedule
-from app.models.data_kpi import PlannedData, RealData
 from typing import Generator
+from dotenv import load_dotenv
+import os
 
-# Definición de la URL para la base de datos SQLite
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+# ==========================================================
+# CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
+# ==========================================================
+load_dotenv()
 
-# Configuración del motor de base de datos con los argumentos de conexión
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
 
-# Función para crear las tablas
-# def create_db_and_tables():
-#     SQLModel.metadata.create_all(engine)
+DATABASE_URL = (
+    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}"
+    f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+)
 
-# Función para obtener la sesión de base de datos
+# Crea el motor de conexión
+engine = create_engine(DATABASE_URL, echo=False)
+
+
+# ==========================================================
+# SESIÓN DE BASE DE DATOS
+# ==========================================================
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session

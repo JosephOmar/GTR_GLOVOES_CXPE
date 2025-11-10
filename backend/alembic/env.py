@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
@@ -5,69 +6,92 @@ from sqlmodel import SQLModel
 import os
 import sys
 from pathlib import Path
+import sqlmodel 
+from dotenv import load_dotenv
 
-# --- Asegurar que el paquete 'app' se pueda importar ---
-ROOT_DIR = Path(__file__).resolve().parents[1]  # carpeta raíz del repo
+# ==========================================================
+# CONFIGURACIÓN DE IMPORTS
+# ==========================================================
+ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
-# Importa tus modelos ANTES de target_metadata
+load_dotenv(ROOT_DIR / ".env")
+
+# ==========================================================
+# IMPORTACIÓN DE MODELOS
+# ==========================================================
 from app.models.worker import Worker, Role, Status, Campaign, Team, WorkType, ContractType, Attendance, UbycallSchedule, Schedule
 from app.models.planned import Planned
 from app.models.user import User
+from app.models.data_kpi import PlannedData, RealData
 
-# Config de Alembic
+# ==========================================================
+# CONFIGURACIÓN BASE DE ALEMBIC
+# ==========================================================
 config = context.config
 
-# Permite sobreescribir la URL por variable de entorno o parámetro -x
-db_url = os.environ.get("DATABASE_URL") or context.get_x_argument(as_dictionary=True).get("db_url")
-if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
-
-# Logging
+# Forzar lectura UTF-8 para fileConfig (Windows-safe)
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    with open(config.config_file_name, encoding="utf-8") as f:
+        fileConfig(f)
 
-# Meta de SQLModel
+# ==========================================================
+# CONFIGURACIÓN DE URL DE CONEXIÓN DESDE .ENV
+# ==========================================================
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+
+DATABASE_URL = (
+    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}"
+    f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+)
+
+# Sobrescribe la URL de Alembic con la de entorno
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+# Metadatos de SQLModel
 target_metadata = SQLModel.metadata
-
-
+# ==========================================================
+# MIGRACIONES OFFLINE / ONLINE
+# ==========================================================
 def run_migrations_offline():
-    """Modo offline: genera SQL sin conectarse."""
+    """Genera SQL sin conectarse a la BD."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        compare_type=True,        # detectar cambios de tipos
-        render_as_batch=True,     # necesario para SQLite
+        compare_type=True,
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online():
-    """Modo online: aplica migraciones con conexión."""
+    """Aplica migraciones conectándose a PostgreSQL."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         future=True,
     )
-
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,        # detectar cambios de tipos
-            render_as_batch=True,     # necesario para SQLite
+            compare_type=True,
         )
-
         with context.begin_transaction():
             context.run_migrations()
 
 
+# ==========================================================
+# EJECUCIÓN
+# ==========================================================
 if context.is_offline_mode():
     run_migrations_offline()
 else:

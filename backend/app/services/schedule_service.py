@@ -5,7 +5,6 @@ from fastapi import HTTPException, UploadFile
 from typing import List
 from datetime import date, timedelta
 from sqlmodel import Session, select, delete, and_
-import logging
 import time  # ✅ para medir duración
 import traceback
 
@@ -19,7 +18,6 @@ from app.core.utils.workers_cx.columns_names import (
     DAY, BREAK_START, BREAK_END, REST_DAY
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 async def process_and_persist_schedules(
@@ -56,22 +54,15 @@ async def process_and_persist_schedules(
         monday_prev = monday_curr - timedelta(days=7)
 
         # 3️⃣ Purga
-        t_purge = time.perf_counter()
         session.exec(delete(Schedule).where(Schedule.date < monday_prev))
         session.exec(delete(UbycallSchedule).where(UbycallSchedule.date < monday_prev))
         session.exec(delete(Schedule).where(and_(Schedule.date >= monday_curr, Schedule.date <= sunday_curr)))
         session.exec(delete(UbycallSchedule).where(and_(UbycallSchedule.date >= monday_curr, UbycallSchedule.date <= sunday_curr)))
         session.flush()
-        print(f"⏳ Purga completada en {time.perf_counter() - t_purge:.2f} s")
 
-        # 4️⃣ Generar nuevos registros
-        t_gen = time.perf_counter()
         df_conc = schedule_concentrix(df_conc_raw, people_obs_raw, week=week, year=year)
         df_uby = schedule_ubycall(df_uby_raw)
-        print(f"📊 Generación de dataframes completada en {time.perf_counter() - t_gen:.2f} s")
 
-        # 5️⃣ Validar documentos existentes
-        t_validate = time.perf_counter()
         conc_docs = set(df_conc[DOCUMENT].astype(str).str.strip())
         uby_docs = set(df_uby[DOCUMENT].astype(str).str.strip())
         all_docs = conc_docs.union(uby_docs)
@@ -80,10 +71,7 @@ async def process_and_persist_schedules(
             session.exec(select(Worker.document).where(Worker.document.in_(all_docs))).all()
         )
         missing_docs = sorted(all_docs - existing_docs)
-        print(f"🔍 Validación de documentos en {time.perf_counter() - t_validate:.2f} s")
 
-        # 6️⃣ Convertir DataFrame → lista de diccionarios
-        t_prepare = time.perf_counter()
         conc_records = [
             {
                 "worker_document": str(row.document).strip(),
@@ -111,30 +99,21 @@ async def process_and_persist_schedules(
             for row in df_uby.itertuples(index=False)
             if str(row.document).strip() in existing_docs
         ]
-        print(f"🧩 Preparación de registros en {time.perf_counter() - t_prepare:.2f} s")
 
-        # 7️⃣ Inserción masiva
-        t_insert = time.perf_counter()
         if conc_records:
             session.bulk_insert_mappings(Schedule, conc_records)
         if uby_records:
             session.bulk_insert_mappings(UbycallSchedule, uby_records)
         session.commit()
-        print(f"💾 Inserción masiva completada en {time.perf_counter() - t_insert:.2f} s")
 
-        # 🧾 Cálculo total
-        total_time = time.perf_counter() - start_time
         inserted_conc = len(conc_records)
         inserted_uby = len(uby_records)
 
-        print(f"✅ Total: {inserted_conc} Concentrix | {inserted_uby} Ubycall")
-        print(f"🕒 Tiempo total de proceso: {total_time:.2f} segundos")
 
         return {
             "inserted_concentrix": inserted_conc,
             "inserted_ubycall": inserted_uby,
-            "missing_workers": missing_docs,
-            "time_seconds": round(total_time, 2),
+            "missing_workers": missing_docs
         }
     except Exception as e: 
         print("❌ Error inesperado en process_and_persist_schedules:")

@@ -34,7 +34,6 @@ async def process_and_persist_attendance(
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"Error al leer archivo: {e}")
         
-        print(target_date)
         # 2️⃣ Normalizar data
         try:
             df_attendance = clean_attendance(df_raw, target_date)
@@ -49,7 +48,6 @@ async def process_and_persist_attendance(
             target_date = df_attendance["date"].iloc[0]
 
         # 4️⃣ Purga asistencias de ese mismo día (evita duplicados por nueva carga)
-        print(f"Eliminando registros para la fecha: {target_date}")
         session.exec(
             delete(Attendance).where(Attendance.date == target_date)  # Comparar solo la parte de la fecha
         )
@@ -153,8 +151,6 @@ async def process_and_persist_attendance(
                 if datetime.combine(date_row, check_out[0]) > start_datetime
                 and datetime.combine(date_row, check_out[0])  <= end_datetime + timedelta(hours=4)
             ]
-            if api_email == 'dlhuaman.whl@service.glovoapp.com':
-                print(valid_check_out_times)
             valid_check_out_times.sort()
 
             if valid_check_out_times:
