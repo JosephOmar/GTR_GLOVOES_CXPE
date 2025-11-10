@@ -44,7 +44,9 @@ async def process_and_persist_schedules(
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-
+        print('xd')
+        print(week)
+        print('xd')
         # 2️⃣ Calcular semana actual o especificada   
         today = date.today()
         year = year or today.year
@@ -58,7 +60,6 @@ async def process_and_persist_schedules(
         session.exec(delete(UbycallSchedule).where(UbycallSchedule.date < monday_prev))
         session.exec(delete(Schedule).where(and_(Schedule.date >= monday_curr, Schedule.date <= sunday_curr)))
         session.exec(delete(UbycallSchedule).where(and_(UbycallSchedule.date >= monday_curr, UbycallSchedule.date <= sunday_curr)))
-        session.flush()
 
         df_conc = schedule_concentrix(df_conc_raw, people_obs_raw, week=week, year=year)
         df_uby = schedule_ubycall(df_uby_raw)

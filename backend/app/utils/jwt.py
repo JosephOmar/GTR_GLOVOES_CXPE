@@ -6,7 +6,9 @@ from typing import Optional
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+env_name = os.getenv("ENVIRONMENT", "development")
+env_file = ".env.prod" if env_name == "production" else ".env.dev"
+load_dotenv(env_file)
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"

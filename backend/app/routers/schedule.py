@@ -1,6 +1,6 @@
 from typing import List, Dict
 from datetime import date
-from fastapi import APIRouter, UploadFile, Depends, File
+from fastapi import APIRouter, UploadFile, Depends, File, Form
 from sqlmodel import Session, select
 
 from app.database.database import get_session
@@ -12,8 +12,8 @@ router = APIRouter(tags=["schedules"])
 @router.post("/upload-schedules/", summary="Carga y persiste horarios desde Excel")
 async def upload_schedules(
     files: List[UploadFile] = File(...),
-    week: int | None = None,
-    year: int | None = None,
+    week: int = Form(...),                 # 👈 obligatorio, viene del form-data
+    year: int | None = Form(None),         # 👈 opcional, también del form-data
     session: Session = Depends(get_session),
 ):
     """

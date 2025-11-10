@@ -6,7 +6,9 @@ import os
 # ==========================================================
 # CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
 # ==========================================================
-load_dotenv()
+env_name = os.getenv("ENVIRONMENT", "development")
+env_file = ".env.prod" if env_name == "production" else ".env.dev"
+load_dotenv(env_file)
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
