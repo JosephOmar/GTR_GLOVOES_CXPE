@@ -18,7 +18,7 @@ if str(ROOT_DIR) not in sys.path:
 
 env_name = os.getenv("ENVIRONMENT", "development")
 env_file = ".env.prod" if env_name == "production" else ".env.dev"
-load_dotenv(ROOT_DIR / env_file)
+load_dotenv(ROOT_DIR / env_file, override=True)
 
 # ==========================================================
 # IMPORTACIÓN DE MODELOS

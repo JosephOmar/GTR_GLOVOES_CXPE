@@ -8,7 +8,7 @@ import os
 # ==========================================================
 env_name = os.getenv("ENVIRONMENT", "development")
 env_file = ".env.prod" if env_name == "production" else ".env.dev"
-load_dotenv(env_file)
+load_dotenv(env_file, override=True)
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
@@ -24,7 +24,7 @@ DATABASE_URL = (
 # Crea el motor de conexión
 engine = create_engine(DATABASE_URL, echo=False)
 
-
+print(POSTGRES_USER)
 # ==========================================================
 # SESIÓN DE BASE DE DATOS
 # ==========================================================
