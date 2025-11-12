@@ -1,7 +1,7 @@
 
 # environment variables
-.env
-.env.production
+.env.dev
+.env.prod
 
 alembic/__pycache__/
 __pycache__/

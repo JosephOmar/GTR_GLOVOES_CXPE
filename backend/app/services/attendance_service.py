@@ -1,8 +1,9 @@
 import pandas as pd
 from fastapi import HTTPException, UploadFile
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime
 from sqlmodel import Session, select, delete, and_
 import traceback
+import time as time_mod
 
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_attendance import validate_excel_attendance
@@ -16,45 +17,81 @@ async def process_and_persist_attendance(
     target_date: date | None = None,
 ) -> dict:
     """
-    Procesa archivo de asistencia, limpia los datos, calcula el estado (present, late, absent),
-    determina check_in, check_out, el tiempo fuera de adherencia (out_of_adherence)
-    y el tiempo total desconectado dentro del turno (offline_minutes).
+    Procesa y persiste registros de asistencia optimizando:
+      - Carga única de Workers y Schedules
+      - Inserción masiva (bulk_insert)
+      - Métricas detalladas por etapa
     """
-    try: 
+    start_total = time_mod.perf_counter()
+    print("\n📂 [ATT] Iniciando process_and_persist_attendance (optimizado)")
+
+    try:
+        # 1️⃣ Leer Excel validado
+        t1 = time_mod.perf_counter()
         try:
-            # 1️⃣ Leer Excel validado
             df_raw, = await handle_file_upload_generic(
                 files=[file],
                 validator=validate_excel_attendance,
                 keyword_to_slot={"attendance": "attendance"},
                 required_slots=["attendance"],
-                post_process=lambda att: (att, )
+                post_process=lambda att: (att,),
             )
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"Error al leer archivo: {e}")
-        
-        # 2️⃣ Normalizar data
+        print(f"✅ [ATT-STEP 1] Lectura completada en {time_mod.perf_counter() - t1:.3f}s")
+
+        # 2️⃣ Limpieza y normalización
+        t2 = time_mod.perf_counter()
         try:
             df_attendance = clean_attendance(df_raw, target_date)
             if df_attendance.empty:
                 raise HTTPException(status_code=400, detail="No se encontraron registros de asistencia")
+        except HTTPException:
+            raise
         except Exception as e:
             traceback.print_exc()
-            raise HTTPException(status_code=400, detail=f"Error al procesar la data: {e}")
+            raise HTTPException(status_code=400, detail=f"Error al limpiar data: {e}")
+        print(f"✅ [ATT-STEP 2] Limpieza completada en {time_mod.perf_counter() - t2:.3f}s")
+        print(f"ℹ️ [ATT] Registros procesados: {len(df_attendance)}")
 
-        # 3️⃣ Si no se pasa fecha, tomamos la de la data (primer registro)
+        # 3️⃣ Determinar fecha objetivo
         if not target_date:
             target_date = df_attendance["date"].iloc[0]
+        print(f"📅 [ATT-STEP 3] target_date={target_date}")
 
-        # 4️⃣ Purga asistencias de ese mismo día (evita duplicados por nueva carga)
-        session.exec(
-            delete(Attendance).where(Attendance.date == target_date)  # Comparar solo la parte de la fecha
-        )
+        # 4️⃣ Purga asistencias previas del mismo día
+        t4 = time_mod.perf_counter()
+        session.exec(delete(Attendance).where(Attendance.date == target_date))
         session.commit()
+        print(f"🧹 [ATT-STEP 4] Purga completada en {time_mod.perf_counter() - t4:.3f}s")
 
+        # 5️⃣ Precarga de datos (Workers y Schedules)
+        t5a = time_mod.perf_counter()
+
+        all_emails = df_attendance["api_email"].astype(str).str.strip().unique().tolist()
+        workers = session.exec(select(Worker).where(Worker.api_email.in_(all_emails))).all()
+        worker_map = {w.api_email.strip(): w for w in workers}
+        print(f"👥 [ATT-STEP 5.1] Workers cargados: {len(worker_map)}")
+
+        all_docs = [w.document for w in workers]
+        schedules = session.exec(
+            select(Schedule).where(
+                and_(Schedule.date == target_date, Schedule.worker_document.in_(all_docs))
+            )
+        ).all()
+        schedule_map = {(s.worker_document, s.date): s for s in schedules}
+        print(f"🗓️ [ATT-STEP 5.2] Schedules cargados: {len(schedule_map)} | Tiempo precarga: {time_mod.perf_counter() - t5a:.3f}s")
+
+        # 6️⃣ Loop principal optimizado
+        t6 = time_mod.perf_counter()
+
+        attendance_records = []
         inserted = 0
         missing_workers = []
+        no_schedule = 0
+        invalid_schedule = 0
+        current_time = datetime.now()
 
         for row in df_attendance.itertuples(index=False):
             api_email = str(row.api_email).strip()
@@ -62,158 +99,114 @@ async def process_and_persist_attendance(
             check_in_times = row.check_in_times
             check_out_times = row.check_out_times
 
-            # Verificar si el trabajador existe
-            worker = session.exec(
-                select(Worker).where(Worker.api_email == api_email)
-            ).first()
-
+            worker = worker_map.get(api_email)
             if not worker:
-                # Si no encontramos el trabajador, podemos optar por no insertarlo
                 missing_workers.append(api_email)
-                continue  # O bien, podrías agregar al trabajador si es necesario
-
-            schedule = session.exec(
-                select(Schedule).where(
-                    and_(
-                        Schedule.worker_document == worker.document,
-                        Schedule.date == date_row
-                    )
-                )
-            ).first()
-
-            if not schedule:
-                continue  # Si no hay horario para el trabajador, lo saltamos.
-
-            if schedule.start_time is None or schedule.end_time is None:
                 continue
 
-            # Convertir start_time y end_time a datetime para realizar operaciones con timedelta
-            start_datetime = datetime.combine(date_row, schedule.start_time)  # Combinar con la fecha
-            end_datetime = datetime.combine(date_row, schedule.end_time)      # Combinar con la fecha
+            schedule = schedule_map.get((worker.document, date_row))
+            if not schedule:
+                no_schedule += 1
+                continue
+            if schedule.start_time is None or schedule.end_time is None:
+                invalid_schedule += 1
+                continue
 
-            # Variables para los cálculos
+            start_dt = datetime.combine(date_row, schedule.start_time)
+            end_dt = datetime.combine(date_row, schedule.end_time)
+
             total_out_of_adherence = 0
             total_offline_minutes = 0
+            status = "Absent"
+            check_in = check_out = None
 
-            # Filtrar solo el primer check_in que sea válido
-            valid_check_in_times = [
-                check_in for check_in in check_in_times
-                if datetime.combine(date_row, check_in[0]) >= start_datetime - timedelta(hours=3)
+            # --- CHECK-IN ---
+            valid_check_in = [
+                ci for ci in check_in_times
+                if datetime.combine(date_row, ci[0]) >= start_dt - timedelta(hours=3)
             ]
-            valid_check_in_times.sort()  # Ordenar los check_in por hora (el primero será el más temprano)
+            valid_check_in.sort()
 
-            check_in = None
-            check_out = None
-            status = "Absent" 
+            if valid_check_in:
+                check_in = valid_check_in[0]
+                ci_time = datetime.combine(date_row, check_in[0])
 
-            if valid_check_in_times:
-                # Tomar el primer check_in válido para determinar el estado
-                check_in = valid_check_in_times[0]
-                check_in_time = datetime.combine(date_row, check_in[0])
-
-                # Determinar estado según el primer check_in
-                if check_in_time <= start_datetime + timedelta(minutes=10):
+                if ci_time <= start_dt + timedelta(minutes=10):
                     status = "Present"
-                elif check_in_time > start_datetime + timedelta(minutes=10):
+                elif ci_time > start_dt + timedelta(minutes=10):
                     status = "Late"
 
-                # Calcular tiempo fuera de adherencia (todos los check_in después del end_time)
-                for ci in valid_check_in_times:
+                for ci in valid_check_in:
                     ci_time = datetime.combine(date_row, ci[0])
-                    ci_duration = ci[1]
-
-                    ci_end_time = ci_time + timedelta(minutes=ci_duration)
-
-                    # Solo contar la parte que cae después del fin del turno
-                    if ci_end_time > end_datetime:
-                        # Recortar a máximo 3h después del fin de turno
-                        cutoff_time = min(ci_end_time, end_datetime + timedelta(hours=3))
-
-                        # Si el inicio es antes del fin del turno, solo cuenta la parte después del fin
-                        if ci_time < end_datetime:
-                            overlap_minutes = round((cutoff_time - end_datetime).total_seconds() / 60)
-                        else:
-                            overlap_minutes = round((cutoff_time - ci_time).total_seconds() / 60)
-
-                        # Evitar negativos
-                        if overlap_minutes > 0:
-                            total_out_of_adherence += overlap_minutes
-
-                # Filtrar solo el primer check_out que sea válido
-            
+                    ci_end = ci_time + timedelta(minutes=ci[1])
+                    if ci_end > end_dt:
+                        cutoff = min(ci_end, end_dt + timedelta(hours=3))
+                        overlap = max(0, round((cutoff - max(ci_time, end_dt)).total_seconds() / 60))
+                        total_out_of_adherence += overlap
 
             # --- CHECK-OUT ---
-
-            current_time = datetime.now()
-            
-            valid_check_out_times = [
-                check_out for check_out in check_out_times
-                if datetime.combine(date_row, check_out[0]) > start_datetime
-                and datetime.combine(date_row, check_out[0])  <= end_datetime + timedelta(hours=4)
+            valid_check_out = [
+                co for co in check_out_times
+                if datetime.combine(date_row, co[0]) > start_dt
+                and datetime.combine(date_row, co[0]) <= end_dt + timedelta(hours=4)
             ]
-            valid_check_out_times.sort()
+            valid_check_out.sort()
 
-            if valid_check_out_times:
-                # Buscar un check_out dentro de los últimos 5 minutos antes de la hora final
-                window_start = end_datetime - timedelta(minutes=5)
-                near_end_check_outs = [
-                    co for co in valid_check_out_times
-                    if window_start <= datetime.combine(date_row, co[0]) <= end_datetime
+            if valid_check_out:
+                window_start = end_dt - timedelta(minutes=5)
+                near_end = [
+                    co for co in valid_check_out
+                    if window_start <= datetime.combine(date_row, co[0]) <= end_dt
                 ]
+                check_out = near_end[0] if near_end else valid_check_out[-1]
 
-                if near_end_check_outs:
-                    # ✅ Caso 1: Hay un check_out cercano al fin del turno (±5 min)
-                    check_out = near_end_check_outs[0]
-                else:
-                    # ✅ Caso 2: No hay check_out cercano, pero buscamos si pasó el límite de 2h
-                    last_valid_check_out = valid_check_out_times[-1]
-                    last_time = datetime.combine(date_row, last_valid_check_out[0])
-
-                    if last_time > end_datetime + timedelta(hours=4):
-                        # ❌ No tomarlo (más de 2h tarde)
-                        check_out = None
-                    else:
-                        # ✅ Tomar el último check_out válido dentro del rango
-                        check_out = last_valid_check_out
-
-            # ✅ Caso 3: si aún no ha terminado el turno, no asignar salida
-            if current_time < end_datetime:
+            if current_time < end_dt:
                 check_out = None
 
-            # --- Cálculo de métricas ---
-            total_offline_minutes = 0
-            for co in valid_check_out_times:
+            for co in valid_check_out:
                 co_time = datetime.combine(date_row, co[0])
-                co_duration = co[1]
-                co_end_time = co_time + timedelta(minutes=co_duration)
+                co_end = co_time + timedelta(minutes=co[1])
+                if co_time <= end_dt:
+                    total_offline_minutes += max(0, round((min(co_end, end_dt) - co_time).total_seconds() / 60))
 
-                # Solo considerar desconexiones que empiezan antes del fin del turno
-                if co_time <= end_datetime:
-                    # Recortar si la desconexión se extiende más allá del turno
-                    valid_end = min(co_end_time, end_datetime)
-                    valid_duration = round((valid_end - co_time).total_seconds() / 60)
-                    total_offline_minutes += valid_duration
-
-            # Validación para asegurar que check_in y check_out estén definidos
-            if valid_check_in_times:
-                check_out_time_value = check_out[0] if check_out else None 
-                # Insertar registro de asistencia solo si ambos valores existen
-                attendance = Attendance(
-                    api_email=api_email,
-                    date=date_row,
-                    check_in=check_in[0],  # Guardamos solo la hora
-                    check_out=check_out_time_value,  # Guardamos solo la hora
-                    status=status,
-                    out_of_adherence=total_out_of_adherence,
-                    offline_minutes=total_offline_minutes,
-                )
-                session.add(attendance)
+            if valid_check_in:
+                attendance_records.append({
+                    "api_email": api_email,
+                    "date": date_row,
+                    "check_in": check_in[0],
+                    "check_out": check_out[0] if check_out else None,
+                    "status": status,
+                    "out_of_adherence": total_out_of_adherence,
+                    "offline_minutes": total_offline_minutes,
+                })
                 inserted += 1
 
-        session.commit()  # Confirmar los cambios
+        loop_time = time_mod.perf_counter() - t6
+        print(
+            f"✅ [ATT-STEP 6] Loop completado en {loop_time:.3f}s | "
+            f"Insertados={inserted} | MissingWorkers={len(missing_workers)} | "
+            f"SinSchedule={no_schedule} | ScheduleInválido={invalid_schedule}"
+        )
 
-        return {"inserted": inserted, "missing_workers": missing_workers}
-    except Exception as e: 
-        print("❌ Error inesperado en process_and_persist_schedules:")
+        # 7️⃣ Inserción masiva
+        t7 = time_mod.perf_counter()
+        if attendance_records:
+            session.bulk_insert_mappings(Attendance, attendance_records)
+            session.commit()
+        print(f"💾 [ATT-STEP 7] Bulk insert completado en {time_mod.perf_counter() - t7:.3f}s")
+
+        total_time = time_mod.perf_counter() - start_total
+        print(f"🏁 [ATT] Proceso completo OK | Insertados={inserted} | Tiempo total={total_time:.3f}s\n")
+
+        return {
+            "inserted": inserted,
+            "missing_workers": missing_workers,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        print("❌ [ATT] Error inesperado en process_and_persist_attendance:")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")

@@ -16,6 +16,7 @@ from app.routers.protected import get_current_user
 from app.models.user import User
 import pytz
 from datetime import datetime, timedelta, timezone
+from app.routers.utils.google_drive_utils import get_public_drive_files, download_drive_file
 
 router = APIRouter()
 
@@ -79,114 +80,81 @@ DRIVE_FOLDER_ID = "1PTEpHEVbY_PpeT_9Cb0Rb3v1IC3MZBRZ"
 
 # Archivos esperados (por parte del nombre)
 REQUIRED_FILES = [
-    {"label": "People Active", "expectedPart": "people_active"},
-    {"label": "People Inactive", "expectedPart": "people_inactive"},
-    {"label": "Scheduling PPP", "expectedPart": "scheduling_ppp"},
-    {"label": "API ID", "expectedPart": "api_id"},
-    {"label": "Master Glovo", "expectedPart": "master_glovo"},
-    {"label": "Scheduling Ubycall", "expectedPart": "scheduling_ubycall"},
+    {"label": "People Active",        "expectedPart": "people_active"},
+    {"label": "People Inactive",      "expectedPart": "people_inactive"},
+    {"label": "Scheduling PPP",       "expectedPart": "scheduling_ppp"},
+    {"label": "API ID",               "expectedPart": "api_id"},
+    {"label": "Master Glovo",         "expectedPart": "master_glovo"},
+    {"label": "Scheduling Ubycall",   "expectedPart": "scheduling_ubycall"},
 ]
-
-
-# ==============================================================
-# FUNCIONES AUXILIARES
-# ==============================================================
-
-def get_public_drive_files(folder_id: str):
-    """
-    Lee la vista embebida de la carpeta pública de Drive y extrae (id, name)
-    de cada archivo listado.
-    """
-    url = f"https://drive.google.com/embeddedfolderview?id={folder_id}#list"
-    res = requests.get(url)
-
-    if res.status_code != 200:
-        raise HTTPException(status_code=500, detail="No se pudo acceder a la carpeta de Google Drive.")
-
-    soup = BeautifulSoup(res.text, "html.parser")
-
-    # Selecciona todos los <a> dentro de flip-entries que apunten a /file/d/<ID>/
-    links = soup.select("div.flip-entries a[href*='/file/d/']")
-
-    files = []
-    for a in links:
-        href = a.get("href", "")
-        m = re.search(r"/file/d/([^/]+)/", href)
-        if not m:
-            continue
-
-        file_id = m.group(1)
-
-        title_el = a.select_one(".flip-entry-title")
-        name = title_el.get_text(strip=True) if title_el else file_id
-
-        files.append({"id": file_id, "name": name})
-
-    if not files:
-        # Debug en caso vuelva a fallar
-        with open("drive_debug.html", "w", encoding="utf-8") as f:
-            f.write(res.text)
-        print("⚠️ No se encontraron archivos. HTML guardado en drive_debug.html")
-        raise HTTPException(status_code=500, detail="No se pudieron obtener los archivos de Google Drive.")
-
-    print(f"📦 Se detectaron {len(files)} archivos en la carpeta pública de Drive:")
-    for f in files:
-        print(f"   - {f['name']} ({f['id']})")
-
-    return files
-
-def download_drive_file(file_id: str, filename: str) -> UploadFile:
-    """Descarga un archivo público de Google Drive y lo devuelve como UploadFile."""
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    res = requests.get(url)
-
-    if res.status_code != 200:
-        raise HTTPException(status_code=500, detail=f"No se pudo descargar el archivo {filename}")
-
-    # Importante: no pasar content_type si tu UploadFile no lo soporta
-    return UploadFile(
-        filename=filename,
-        file=BytesIO(res.content),
-    )
-
-
-# ==============================================================
-# ENDPOINT PRINCIPAL
-# ==============================================================
 
 @router.post("/auto-upload-workers/")
 async def auto_upload_workers(session: Session = Depends(get_session)):
     """
     Descarga automáticamente los archivos desde Google Drive
-    buscándolos por nombre dentro de una carpeta pública.
+    buscándolos por nombre dentro de una carpeta pública y
+    procesa/actualiza los trabajadores.
     """
-    try:
-        print("🔍 [STEP 1] Consultando archivos públicos en carpeta de Drive...")
-        files = get_public_drive_files(DRIVE_FOLDER_ID)
+    import time
+    start_total = time.perf_counter()
+    print("\n⚙️ [WORKERS AUTO] Iniciando carga automática de workers desde Drive...")
 
+    try:
+        # 1️⃣ Consultar archivos públicos
+        t1 = time.perf_counter()
+        print("🔍 [W-STEP 1] Consultando archivos públicos en carpeta de Drive...")
+        files = get_public_drive_files(DRIVE_FOLDER_ID)
+        print(f"📁 [W-STEP 1] Archivos encontrados: {len(files)} | Tiempo: {time.perf_counter() - t1:.3f}s")
+
+        # 2️⃣ Buscar y descargar archivos requeridos
         files_to_process: List[UploadFile] = []
+        t2 = time.perf_counter()
 
         for meta in REQUIRED_FILES:
-            # Buscar el archivo cuyo nombre contenga la palabra esperada
             found = next(
-                (f for f in files if meta["expectedPart"].lower() in f["name"].lower()), None
+                (f for f in files if meta["expectedPart"].lower() in f["name"].lower()),
+                None,
             )
             if not found:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"No se encontró el archivo requerido: {meta['label']}",
-                )
+                msg = f"No se encontró el archivo requerido: {meta['label']}"
+                print(f"❌ [W-STEP 2] {msg}")
+                raise HTTPException(status_code=404, detail=msg)
 
-            print(f"⬇️  Descargando archivo: {found['name']}")
+            print(f"⬇️ [W-STEP 2] Descargando archivo: {found['name']}")
+            dl_start = time.perf_counter()
             upload_file = download_drive_file(found["id"], found["name"])
+            dl_time = time.perf_counter() - dl_start
+            print(f"   ↳ Descargado en {dl_time:.3f}s")
             files_to_process.append(upload_file)
 
-        print("🚀 [STEP 2] Procesando archivos con process_and_persist_workers()...")
-        count = await process_and_persist_workers(files_to_process, session)
+        print(f"✅ [W-STEP 2] Descarga total completada en {time.perf_counter() - t2:.3f}s")
 
-        print(f"✅ Se insertaron {count} trabajadores correctamente.")
-        return {"message": f"✅ Se insertaron {count} trabajadores correctamente."}
+        # 3️⃣ Procesar e insertar/actualizar workers
+        t3 = time.perf_counter()
+        print("🚀 [W-STEP 3] Ejecutando process_and_persist_workers()...")
+        total_processed = await process_and_persist_workers(files_to_process, session)
+        process_time = time.perf_counter() - t3
+        print(f"✅ [W-STEP 3] Proceso de persistencia completado en {process_time:.3f}s")
 
+        # 4️⃣ Totales
+        total_time = time.perf_counter() - start_total
+        print(f"🏁 [WORKERS AUTO] Proceso total completado en {total_time:.3f}s")
+
+        return {
+            "message": f"✅ Se insertaron/actualizaron {total_processed} trabajadores correctamente.",
+            "timing": {
+                "drive_list_s": round(time.perf_counter() - t1, 3),
+                "download_s": round(time.perf_counter() - t2, 3),
+                "process_s": round(process_time, 3),
+                "total_s": round(total_time, 3),
+            },
+        }
+
+    except HTTPException:
+        # Ya logueado arriba
+        raise
     except Exception as e:
-        print("❌ [EXCEPTION]", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        total_time = time.perf_counter() - start_total
+        print(f"❌ [WORKERS AUTO][EXCEPTION] {str(e)} | Tiempo total: {total_time:.3f}s")
+        raise HTTPException(status_code=500, detail=f"Error al procesar los workers automáticamente. ({str(e)})")
+
