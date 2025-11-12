@@ -25,6 +25,7 @@ load_dotenv(ROOT_DIR / env_file, override=True)
 # ==========================================================
 from app.models.worker import Worker, Role, Status, Campaign, Team, WorkType, ContractType, Attendance, UbycallSchedule, Schedule
 from app.models.planned import Planned
+from app.models.real_time_data import RealTimeData
 from app.models.user import User
 from app.models.data_kpi import PlannedData, RealData
 

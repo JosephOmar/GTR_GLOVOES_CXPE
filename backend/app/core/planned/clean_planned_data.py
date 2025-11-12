@@ -16,12 +16,12 @@ COLUMNS_PLANNED_DATA = {
 }
 
 COLUMNS_TEAMS = {
-    'CUSTOMER TIER1': 'CUSTOMER TIER1',
-    'CUSTOMER TIER2': 'CUSTOMER TIER2',
-    'RIDER TIER1': 'RIDER TIER1',
-    'RIDER TIER2': 'RIDER TIER2',
-    'VENDOR TIER1': 'VENDOR TIER1',
-    'VENDOR TIER2': 'VENDOR TIER2',
+    'CUSTOMER TIER1': 'Customer Tier1',
+    'CUSTOMER TIER2': 'Customer Tier2',
+    'RIDER TIER1': 'Rider Tier1',
+    'RIDER TIER2': 'Rider Tier2',
+    'VENDOR TIER1': 'Vendor Tier1',
+    'VENDOR TIER2': 'Vendor Tier2',
 }
 
 def normalize_time(value: str) -> str:
@@ -41,16 +41,16 @@ def normalize_time(value: str) -> str:
     except Exception:
         return None
 
-# def round_to_hour(value: str) -> str:
-#     """
-#     Redondea los intervalos de 30 min a la hora exacta hacia abajo.
-#     Ejemplo: 00:00 -> 00:00, 00:30 -> 00:00, 01:30 -> 01:00
-#     """
-#     try:
-#         t = datetime.strptime(value, "%H:%M")
-#         return t.replace(minute=0).strftime("%H:%M")
-#     except Exception:
-#         return None
+def round_to_hour(value: str) -> str:
+    """
+    Redondea los intervalos de 30 min a la hora exacta hacia abajo.
+    Ejemplo: 00:00 -> 00:00, 00:30 -> 00:00, 01:30 -> 01:00
+    """
+    try:
+        t = datetime.strptime(value, "%H:%M")
+        return t.replace(minute=0).strftime("%H:%M")
+    except Exception:
+        return None
 
 def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     # Renombramos columnas
@@ -65,13 +65,15 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
 
     # Rango de fechas: dia actual → 1 día después
     current_day = datetime.today().date()
-    start_date = current_day
+    start_date = current_day - timedelta(days=1)
     end_date = current_day + timedelta(days=6)
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
 
     # Normalizamos TIME_INTERVAL
     data[INTERVAL] = data[INTERVAL].apply(normalize_time)
+
+    data[INTERVAL] = data[INTERVAL].apply(round_to_hour)
 
     # Si después de la normalización hay valores vacíos, los llenamos con "00:00"
     data[INTERVAL] = data[INTERVAL].fillna("00:00")
@@ -81,16 +83,16 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
 
     data[REQUIRED_AGENTS] = data[REQUIRED_AGENTS].apply(lambda x:round(x))
 
-    # # Agrupación por TEAM, DATE, HORA
-    # agg_funcs = {
-    #     FORECAST_RECEIVED: "sum",
-    #     REQUIRED_AGENTS: "max",
-    #     SCHEDULED_AGENTS: "max",
-    # }
+    # Agrupación por TEAM, DATE, HORA
+    agg_funcs = {
+        FORECAST_RECEIVED: "sum",
+        REQUIRED_AGENTS: "max",
+        SCHEDULED_AGENTS: "max",
+    }
 
-    # data = (
-    #     data.groupby([TEAM, DATE, INTERVAL], as_index=False)
-    #         .agg(agg_funcs)
-    # )
+    data = (
+        data.groupby([TEAM, DATE, INTERVAL], as_index=False)
+            .agg(agg_funcs)
+    )
     
     return data

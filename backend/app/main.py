@@ -17,6 +17,7 @@ from app.routers import (
     planned,
     users,
     attendance,
+    real_time_data
 )
 
 # --- Nueva forma recomendada: lifespan ---
@@ -67,6 +68,7 @@ app.include_router(google_sheets_proxy.router)
 app.include_router(planned.router)
 app.include_router(users.router)
 app.include_router(attendance.router)
+app.include_router(real_time_data.router)
 
 
 # Dependencia para obtener la sesión
