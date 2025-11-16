@@ -46,6 +46,7 @@ def safe_int(v) -> int | None:
 
 
 async def planned_service(file1: UploadFile, session: Session):
+    print('llega aquí')
     try:
         df = await handle_file_upload_generic(
             files=[file1],
@@ -56,7 +57,7 @@ async def planned_service(file1: UploadFile, session: Session):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
+    print('F')
     # 🔴 1) Eliminar todos los registros antes de insertar
     session.exec(delete(Planned))
     session.commit()

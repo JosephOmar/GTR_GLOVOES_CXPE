@@ -47,6 +47,12 @@ def clean_real_time_data(data: pd.DataFrame) -> pd.DataFrame:
         }
     )
 
+    data["contacts_received"] = (
+        data["contacts_received"]
+        .str.replace(",", "", regex=False)  # Eliminar comas
+        .astype(float)  # Convertir a tipo float
+    )
+
     # 6️⃣ Limpieza de SLA (% → float)
     if "SLA FRT" in data.columns:
         data["SLA FRT"] = (

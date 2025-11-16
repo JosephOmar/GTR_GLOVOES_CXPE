@@ -53,46 +53,41 @@ def round_to_hour(value: str) -> str:
         return None
 
 def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
-    # Renombramos columnas
+
     data = data.rename(columns=COLUMNS_PLANNED_DATA)
+
     data = data[list(COLUMNS_PLANNED_DATA.values())]
 
-    # Filtramos por equipos
     data = data[data[TEAM].isin(COLUMNS_TEAMS.keys())]
 
-    # Convertimos a tipo fecha
     data[DATE] = pd.to_datetime(data[DATE], errors='coerce').dt.date
 
-    # Rango de fechas: dia actual → 1 día después
     current_day = datetime.today().date()
     start_date = current_day - timedelta(days=1)
     end_date = current_day + timedelta(days=6)
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]
 
-    # Normalizamos TIME_INTERVAL
     data[INTERVAL] = data[INTERVAL].apply(normalize_time)
 
     data[INTERVAL] = data[INTERVAL].apply(round_to_hour)
 
-    # Si después de la normalización hay valores vacíos, los llenamos con "00:00"
     data[INTERVAL] = data[INTERVAL].fillna("00:00")
 
-    # Reemplazo de nombres de equipos
     data[TEAM] = data[TEAM].replace(COLUMNS_TEAMS)
 
-    data[REQUIRED_AGENTS] = data[REQUIRED_AGENTS].apply(lambda x:round(x))
+    data[REQUIRED_AGENTS] = data[REQUIRED_AGENTS].apply(lambda x: round(x))
 
-    # Agrupación por TEAM, DATE, HORA
     agg_funcs = {
         FORECAST_RECEIVED: "sum",
         REQUIRED_AGENTS: "max",
         SCHEDULED_AGENTS: "max",
+        FORECAST_THT: "first", 
     }
 
     data = (
         data.groupby([TEAM, DATE, INTERVAL], as_index=False)
             .agg(agg_funcs)
     )
-    
+
     return data
