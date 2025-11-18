@@ -243,6 +243,27 @@ async def process_and_persist_schedules(
 
         print(f"🧱 [STEP 6] Registros nuevos detectados | Concentrix: {len(conc_records)} | Ubycall: {len(uby_records)} | Tiempo {time.perf_counter() - t6:.3f}s")
 
+        # **Eliminar registros que están en la base de datos pero NO en la nueva data**
+        # Eliminar registros de Schedule (de Concentrix) que ya no están en la nueva data
+        for key, old_val in existing_conc_map.items():
+            doc, date = key
+            # Si el registro no está en los nuevos datos, eliminarlo
+            if (doc, date) not in [(str(row.document).strip(), row.date) for row in df_conc.itertuples(index=False)]:
+                print(f"🗑️ Eliminando registro de Schedule para worker_document={doc} en fecha={date}")
+                session.exec(delete(Schedule).where(Schedule.worker_document == doc, Schedule.date == date))
+
+        # Eliminar registros de UbycallSchedule que ya no están en la nueva data
+        for key in existing_uby_map.keys():
+            doc, date, start_time, end_time = key
+            # Si el registro no está en los nuevos datos, eliminarlo
+            if (doc, date, start_time, end_time) not in [(str(row.document).strip(), row.date, row.start_time, row.end_time) for row in df_uby.itertuples(index=False)]:
+                print(f"🗑️ Eliminando registro de UbycallSchedule para worker_document={doc} en fecha={date}")
+                session.exec(delete(UbycallSchedule).where(UbycallSchedule.worker_document == doc, UbycallSchedule.date == date, UbycallSchedule.start_time == start_time, UbycallSchedule.end_time == end_time))
+
+        # Hacer commit de las eliminaciones
+        session.commit()
+
+
         # 8️⃣ Inserciones por lotes (solo si hay registros nuevos)
         if conc_records or uby_records:
             t7 = time.perf_counter()

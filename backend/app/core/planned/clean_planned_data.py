@@ -63,7 +63,7 @@ def clean_planned_data(data: pd.DataFrame) -> pd.DataFrame:
     data[DATE] = pd.to_datetime(data[DATE], errors='coerce').dt.date
 
     current_day = datetime.today().date()
-    start_date = current_day - timedelta(days=1)
+    start_date = current_day - timedelta(days=7)
     end_date = current_day + timedelta(days=6)
     mask = (data[DATE] >= start_date) & (data[DATE] <= end_date)
     data = data.loc[mask]

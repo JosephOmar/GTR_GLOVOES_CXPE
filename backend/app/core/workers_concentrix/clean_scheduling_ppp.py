@@ -8,7 +8,7 @@ COLUMNS_SCHEDULING_PPP = {
     "Observaciones 1°": OBSERVATION_1,
     "Observaciones 2°": OBSERVATION_2,
     # "Usuarios" : api_email,
-    "id" : REQUIREMENT_ID,
+    "ID" : REQUIREMENT_ID,
     "SUPERVISOR" : SUPERVISOR,
     "Productivo": PRODUCTIVE
 }
