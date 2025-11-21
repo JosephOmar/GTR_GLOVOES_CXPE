@@ -5,7 +5,7 @@ import datetime
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=20, unique=True)
+    name: str = Field(max_length=30, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="role")
 
@@ -17,25 +17,25 @@ class Status(SQLModel, table=True):
 
 class Campaign(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=20, unique=True)
+    name: str = Field(max_length=30, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="campaign")
 
 class Team(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=20, unique=True)
+    name: str = Field(max_length=30, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="team")
 
 class WorkType(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=20, unique=True)
+    name: str = Field(max_length=30, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="work_type")
 
 class ContractType(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=20, unique=True)
+    name: str = Field(max_length=30, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="contract_type")
 
