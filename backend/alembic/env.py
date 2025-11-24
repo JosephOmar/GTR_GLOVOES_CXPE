@@ -28,6 +28,7 @@ from app.models.planned import Planned
 from app.models.real_time_data import RealTimeData
 from app.models.user import User
 from app.models.data_kpi import PlannedData, RealData
+from app.models.sla_breached import SlaBreached
 
 # ==========================================================
 # CONFIGURACIÓN BASE DE ALEMBIC

@@ -1,10 +1,12 @@
 import pandas as pd
 from fastapi import HTTPException, UploadFile
-from typing import List
-from sqlmodel import Session, select
+from typing import List, Dict
+from sqlmodel import Session, select, insert
 from datetime import datetime
 import time
 import traceback
+import math
+from collections import Counter
 
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_workers import validate_excel_workers
@@ -45,27 +47,19 @@ async def process_and_persist_workers(
                 people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall)
         )
 
-        df_concentrix = generate_worker_cx_table(people_active, people_inactive,scheduling_ppp, api_id)
-
-
+        df_concentrix = generate_worker_cx_table(people_active, people_inactive, scheduling_ppp, api_id)
         df_ubycall = generate_worker_uby_table(master_glovo, scheduling_ubycall, api_id, people_active, people_inactive)
 
-
         df = pd.concat([df_concentrix, df_ubycall], ignore_index=True)
-
         df = df.where(pd.notnull(df), None)
-        role_map = upsert_lookup_table(
-            session, Role,       df["role"].tolist())
-        status_map = upsert_lookup_table(
-            session, Status,     df["status"].tolist())
-        campaign_map = upsert_lookup_table(
-            session, Campaign,   df["campaign"].tolist())
-        team_map = upsert_lookup_table(
-            session, Team,       df["team"].tolist())
-        worktype_map = upsert_lookup_table(
-            session, WorkType,   df["work_type"].tolist())
-        contract_map = upsert_lookup_table(
-            session, ContractType, df["contract_type"].tolist())
+
+        # Obtener las listas de claves para las tablas de búsqueda
+        role_map = upsert_lookup_table(session, Role, df["role"].tolist())
+        status_map = upsert_lookup_table(session, Status, df["status"].tolist())
+        campaign_map = upsert_lookup_table(session, Campaign, df["campaign"].tolist())
+        team_map = upsert_lookup_table(session, Team, df["team"].tolist())
+        worktype_map = upsert_lookup_table(session, WorkType, df["work_type"].tolist())
+        contract_map = upsert_lookup_table(session, ContractType, df["contract_type"].tolist())
 
         # 🕒 Tiempo 3: Preparación de registros
         workers_data = []
@@ -103,7 +97,7 @@ async def process_and_persist_workers(
                 "productive": row.get("productive"),
             })
 
-        # 🕒 Tiempo 4: Inserción masiva
+        # 🕒 Tiempo 4: Procesar e insertar o actualizar en base de datos
         total_processed = bulk_upsert_workers(session, workers_data)
 
         return total_processed

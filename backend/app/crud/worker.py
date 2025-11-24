@@ -45,70 +45,35 @@ def upsert_worker(session: Session, data: dict) -> Worker:
 def bulk_upsert_workers(session: Session, workers_data: List[Dict]) -> int:
     """
     Inserta o actualiza múltiples Workers.
-    Maneja conflictos tanto por api_email (cuando existe) como por document (cuando no hay email).
+    Maneja conflictos por document.
+    Solo actualiza si hay cambios en los registros existentes.
     """
 
     if not workers_data:
         return 0
 
-    # === 0️⃣ Limpieza de NaN ===
-    for w in workers_data:
-        for k, v in w.items():
-            if isinstance(v, float) and math.isnan(v):
-                w[k] = None
-
-    # === 1️⃣ Detección de duplicados ===
-    pairs = [(w.get("document"), w.get("api_email")) for w in workers_data]
-    duplicates = [pair for pair, count in Counter(pairs).items() if count > 1]
-    if duplicates:
-        print("⚠️ Duplicados encontrados en workers_data:")
-        for d in duplicates:
-            print(f"   → document={d[0]} | api_email={d[1]}")
-
-        temp_map = {}
-        for w in workers_data:
-            key = (w.get("document"), w.get("api_email"))
-            temp_map[key] = w
-        workers_data = list(temp_map.values())
-        print(f"✅ Duplicados eliminados. Total final: {len(workers_data)} registros.")
-
-    # === 2️⃣ Separar por tipo de clave ===
-    workers_with_email = [w for w in workers_data if w.get("api_email")]
-    workers_without_email = [w for w in workers_data if not w.get("api_email")]
-
     total_processed = 0
 
-    # === 3️⃣ UPSERT por api_email ===
-    if workers_with_email:
-        stmt = insert(Worker).values(workers_with_email)
-        update_columns = {
-            c.name: c
-            for c in stmt.excluded
-            if c.name not in ("id", "document")
-        }
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["api_email"],
-            set_=update_columns,
-        )
-        session.execute(stmt)
-        total_processed += len(workers_with_email)
+    # Verificar si existe un trabajador con el mismo document en la base de datos
+    for worker in workers_data:
+        existing_worker = session.query(Worker).filter(Worker.document == worker["document"]).first()
 
-    # === 4️⃣ UPSERT por document ===
-    if workers_without_email:
-        stmt2 = insert(Worker).values(workers_without_email)
-        update_columns2 = {
-            c.name: c
-            for c in stmt2.excluded
-            if c.name not in ("id", "api_email")
-        }
-        stmt2 = stmt2.on_conflict_do_update(
-            index_elements=["document"],
-            set_=update_columns2,
-        )
-        session.execute(stmt2)
-        total_processed += len(workers_without_email)
+        if existing_worker:
+            # Si el trabajador existe, comparar si hay cambios en los datos
+            is_updated = False
+            for key, value in worker.items():
+                if getattr(existing_worker, key) != value:
+                    setattr(existing_worker, key, value)  # Actualizar solo si hay un cambio
+                    is_updated = True
 
-    # === 5️⃣ Confirmar cambios ===
+            if is_updated:
+                total_processed += 1
+        else:
+            # Si no existe, insertamos el nuevo trabajador
+            session.add(Worker(**worker))
+            total_processed += 1
+
+    # Confirmar cambios
     session.commit()
 
     print(f"✅ Total registros procesados: {total_processed}")
