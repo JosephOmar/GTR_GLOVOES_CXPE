@@ -14,6 +14,12 @@ EXCEL_READ_CONFIGS: Dict[str, Dict[str, Any]] = {
         "skiprows": 3,
         "engine": "openpyxl",
     },
+    "schedule_ppp":  {
+        "sheet_name": "RESUMEN",
+        "skiprows": 4,
+        "header": [0, 1],
+        "engine": "openpyxl",
+    },
     "api_id": {},      # si necesita algo especial, lo pones aquí
     "master_glovo": {
         "sheet_name": "AGENTES_UBY",

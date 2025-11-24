@@ -38,38 +38,44 @@ async def upload_workers(
 )
 def read_workers(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # Cargamos role, status, campaign, etc. y además schedules y ubycall_schedules
-    peru_tz = timezone(timedelta(hours=-5))
-    current_day = datetime.now(peru_tz).date()
-    previous_day = current_day - timedelta(days=1)
-    statement = (
-        select(Worker)
-        .options(
-            selectinload(Worker.role),
-            selectinload(Worker.status),
-            selectinload(Worker.campaign),
-            selectinload(Worker.team),
-            selectinload(Worker.work_type),
-            selectinload(Worker.contract_type),
-            selectinload(Worker.schedules),
-            selectinload(Worker.ubycall_schedules),
-            selectinload(Worker.attendances),
-            with_loader_criteria(
-                Schedule,
-                Schedule.date.in_([current_day, previous_day])
-            ),
-            with_loader_criteria(
-                UbycallSchedule,
-                UbycallSchedule.date.in_([current_day, previous_day])
-            ),
+
+    try:
+        print('xd')
+        peru_tz = timezone(timedelta(hours=-5))
+        current_day = datetime.now(peru_tz).date()
+        previous_day = current_day - timedelta(days=1)
+        statement = (
+            select(Worker)
+            .options(
+                selectinload(Worker.role),
+                selectinload(Worker.status),
+                selectinload(Worker.campaign),
+                selectinload(Worker.team),
+                selectinload(Worker.work_type),
+                selectinload(Worker.contract_type),
+                selectinload(Worker.schedules),
+                selectinload(Worker.ubycall_schedules),
+                selectinload(Worker.attendances),
+                with_loader_criteria(
+                    Schedule,
+                    Schedule.start_date.in_([current_day, previous_day])
+                ),
+                with_loader_criteria(
+                    UbycallSchedule,
+                    UbycallSchedule.date.in_([current_day, previous_day])
+                ),
+            )
         )
-    )
-    workers = session.exec(statement).all()
+        workers = session.exec(statement).all()
 
-    # for w in workers:
-    #     w.schedules = [s for s in w.schedules if s.date == current_day]
-    #     w.ubycall_schedules = [u for u in w.ubycall_schedules if u.date == current_day]
-
-    return workers
+        # for w in workers:
+        #     w.schedules = [s for s in w.schedules if s.date == current_day]
+        #     w.ubycall_schedules = [u for u in w.ubycall_schedules if u.date == current_day]
+        return workers
+    except Exception as e:
+        print('xd')
+        print(e)
+        print('xd')
 
 # ==============================================================
 # CONFIGURACIÓN

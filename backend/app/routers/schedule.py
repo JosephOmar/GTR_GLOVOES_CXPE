@@ -49,7 +49,7 @@ def read_today_schedules(session: Session = Depends(get_session)) -> Dict[str, L
     today = date.today()
 
     conc = session.exec(
-        select(Schedule).where(Schedule.date == today)
+        select(Schedule).where(Schedule.start_date == today)
     ).all()
     uby = session.exec(
         select(UbycallSchedule).where(UbycallSchedule.date == today)
@@ -61,13 +61,14 @@ def read_today_schedules(session: Session = Depends(get_session)) -> Dict[str, L
     }
 
 # Usando el mismo DRIVE_FOLDER_ID que ya tienes
-DRIVE_FOLDER_ID = "1unVeBa4Xyu90NzIdCnMENoLw3jS_YWrF"
+DRIVE_FOLDER_ID = "1H1B_eqjXupZBPk6VdLJ2aeou4PPyOq-H"
 
 # Config de archivos esperados para schedules
 REQUIRED_SCHEDULES = [
     {"label": "Schedule Concentrix", "expectedPart": "schedule_concentrix"},
     {"label": "People Obs", "expectedPart": "people_obs"},
     {"label": "Schedule Ubycall", "expectedPart": "schedule_ubycall"},
+    {"label": "Schedule ppp", "expectedPart": "schedule_ppp"},
 ]
 
 

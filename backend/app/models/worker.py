@@ -103,8 +103,8 @@ class UbycallSchedule(SQLModel, table=True):
 class Schedule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     worker_document: str = Field(foreign_key="worker.document")
-    date: date
-    day: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     break_start: Optional[time] = None

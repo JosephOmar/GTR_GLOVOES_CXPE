@@ -57,7 +57,7 @@ def read_today_attendance(session: Session = Depends(get_session)) -> Dict[str, 
     try:
         # 1. Schedules de hoy
         schedules_today = session.exec(
-            select(Schedule).where(Schedule.date == today)
+            select(Schedule).where(Schedule.start_date == today)
         ).all()
 
         # 2. Attendances de hoy

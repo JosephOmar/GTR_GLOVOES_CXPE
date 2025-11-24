@@ -11,8 +11,8 @@ class UbycallScheduleRead(SQLModel):
 
 
 class ScheduleRead(SQLModel):
-    date:        date
-    day:         str
+    start_date:  date
+    end_date:    date
     start_time:  Optional[time]
     end_time:    Optional[time]
     break_start: Optional[time]

@@ -77,10 +77,10 @@ async def process_and_persist_attendance(
         all_docs = [w.document for w in workers]
         schedules = session.exec(
             select(Schedule).where(
-                and_(Schedule.date == target_date, Schedule.worker_document.in_(all_docs))
+                and_(Schedule.start_date == target_date, Schedule.worker_document.in_(all_docs))
             )
         ).all()
-        schedule_map = {(s.worker_document, s.date): s for s in schedules}
+        schedule_map = {(s.worker_document, s.start_date): s for s in schedules}
         print(f"🗓️ [ATT-STEP 5.2] Schedules cargados: {len(schedule_map)} | Tiempo precarga: {time_mod.perf_counter() - t5a:.3f}s")
 
         # 6️⃣ Loop principal optimizado

@@ -41,6 +41,7 @@ GERENCIA = "GERENCIA"
 
 #! HORARIOS
 DATE = 'date'
+END_DATE = 'end_date'
 START_TIME = 'start_time'
 END_TIME = 'end_time'
 BREAK_START = 'break_start'

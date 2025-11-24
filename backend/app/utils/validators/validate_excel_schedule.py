@@ -7,6 +7,7 @@ _SCHEDULE_MAPPING = {
     "schedule_concentrix": "schedule_concentrix",
     "people_obs": "people_obs",
     "schedule_ubycall": "schedule_ubycall",
+    "schedule_ppp": "schedule_ppp"
 }
 
 def validate_excel_schedule(file_name: str) -> str:
