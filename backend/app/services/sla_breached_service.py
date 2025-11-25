@@ -35,7 +35,6 @@ def safe_int(v):
     except Exception:
         return None
 
-
 async def sla_breached_service(file1: UploadFile, session: Session):
     print("🟢 Iniciando procesamiento del archivo:", file1.filename)
 
@@ -76,14 +75,30 @@ async def sla_breached_service(file1: UploadFile, session: Session):
             interval = safe_str(row.get("interval"))
             api_email = safe_str(row.get("api_email"))
             chat_breached = safe_int(row.get("chat_breached"))
+            # Obtener los enlaces
+            links = row.get("link", [])
+            
+            # Si los enlaces están en formato string, transformarlos a una lista
+            if isinstance(links, str):
+                links = links.split('\n')  # Si los enlaces están concatenados con saltos de línea, los convertimos en una lista
 
             # Comprobamos si el registro ya existe
             if (team, date, interval, api_email) in existing_data:
-                # Si el registro existe, comparamos el chat_breached
                 existing_record = existing_data[(team, date, interval, api_email)]
+
+                updated = False
+
+                # Actualizar chat_breached si el nuevo es mayor
                 if chat_breached > existing_record.chat_breached:
-                    # Si el nuevo valor es mayor, actualizamos el registro
                     existing_record.chat_breached = chat_breached
+                    updated = True
+
+                # Actualizar link si está vacío o null
+                if not existing_record.link and links:
+                    existing_record.link = links
+                    updated = True
+
+                if updated:
                     session.add(existing_record)
                     rows_updated += 1
             else:
@@ -93,7 +108,8 @@ async def sla_breached_service(file1: UploadFile, session: Session):
                     date=date,
                     interval=interval,
                     api_email=api_email,
-                    chat_breached=chat_breached
+                    chat_breached=chat_breached,
+                    link=links  # Insertamos los enlaces como una lista
                 )
                 session.add(new_record)
                 rows_inserted += 1
