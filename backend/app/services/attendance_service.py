@@ -4,6 +4,8 @@ from datetime import date, timedelta, datetime
 from sqlmodel import Session, select, delete, and_
 import traceback
 import time as time_mod
+import io
+from sqlalchemy import text
 
 from app.services.utils.upload_service import handle_file_upload_generic
 from app.utils.validators.validate_excel_attendance import validate_excel_attendance
@@ -16,12 +18,7 @@ async def process_and_persist_attendance(
     session: Session,
     target_date: date | None = None,
 ) -> dict:
-    """
-    Procesa y persiste registros de asistencia optimizando:
-      - Carga única de Workers y Schedules
-      - Inserción masiva (bulk_insert)
-      - Métricas detalladas por etapa
-    """
+
     start_total = time_mod.perf_counter()
     print("\n📂 [ATT] Iniciando process_and_persist_attendance (optimizado)")
 
@@ -41,7 +38,7 @@ async def process_and_persist_attendance(
             raise HTTPException(status_code=400, detail=f"Error al leer archivo: {e}")
         print(f"✅ [ATT-STEP 1] Lectura completada en {time_mod.perf_counter() - t1:.3f}s")
 
-        # 2️⃣ Limpieza y normalización
+        # 2️⃣ Limpieza
         t2 = time_mod.perf_counter()
         try:
             df_attendance = clean_attendance(df_raw, target_date)
@@ -55,18 +52,20 @@ async def process_and_persist_attendance(
         print(f"✅ [ATT-STEP 2] Limpieza completada en {time_mod.perf_counter() - t2:.3f}s")
         print(f"ℹ️ [ATT] Registros procesados: {len(df_attendance)}")
 
-        # 3️⃣ Determinar fecha objetivo
+        # 3️⃣ target_date
         if not target_date:
             target_date = df_attendance["date"].iloc[0]
         print(f"📅 [ATT-STEP 3] target_date={target_date}")
 
-        # 4️⃣ Purga asistencias previas del mismo día
+        # 4️⃣ DELETE optimizado (RAW SQL → ~100ms)
         t4 = time_mod.perf_counter()
-        session.exec(delete(Attendance).where(Attendance.date == target_date))
+        session.exec(
+            text("DELETE FROM attendance WHERE date = :d").bindparams(d=target_date)
+        )
         session.commit()
         print(f"🧹 [ATT-STEP 4] Purga completada en {time_mod.perf_counter() - t4:.3f}s")
 
-        # 5️⃣ Precarga de datos (Workers y Schedules)
+        # 5️⃣ Precarga
         t5a = time_mod.perf_counter()
 
         all_emails = df_attendance["api_email"].astype(str).str.strip().unique().tolist()
@@ -83,15 +82,15 @@ async def process_and_persist_attendance(
         schedule_map = {(s.worker_document, s.start_date): s for s in schedules}
         print(f"🗓️ [ATT-STEP 5.2] Schedules cargados: {len(schedule_map)} | Tiempo precarga: {time_mod.perf_counter() - t5a:.3f}s")
 
-        # 6️⃣ Loop principal optimizado
+        # 6️⃣ Loop principal
         t6 = time_mod.perf_counter()
 
-        attendance_records = []
+        records = []
         inserted = 0
         missing_workers = []
         no_schedule = 0
         invalid_schedule = 0
-        current_time = datetime.now()
+        now = datetime.now()
 
         for row in df_attendance.itertuples(index=False):
             api_email = str(row.api_email).strip()
@@ -115,20 +114,20 @@ async def process_and_persist_attendance(
             start_dt = datetime.combine(date_row, schedule.start_time)
             end_dt = datetime.combine(date_row, schedule.end_time)
 
-            total_out_of_adherence = 0
-            total_offline_minutes = 0
+            total_out = 0
+            total_off = 0
             status = "Absent"
             check_in = check_out = None
 
-            # --- CHECK-IN ---
-            valid_check_in = [
+            # CHECK-IN
+            valid_ci = [
                 ci for ci in check_in_times
                 if datetime.combine(date_row, ci[0]) >= start_dt - timedelta(hours=3)
             ]
-            valid_check_in.sort()
+            valid_ci.sort()
 
-            if valid_check_in:
-                check_in = valid_check_in[0]
+            if valid_ci:
+                check_in = valid_ci[0]
                 ci_time = datetime.combine(date_row, check_in[0])
 
                 if ci_time <= start_dt + timedelta(minutes=10):
@@ -136,49 +135,47 @@ async def process_and_persist_attendance(
                 elif ci_time > start_dt + timedelta(minutes=10):
                     status = "Late"
 
-                for ci in valid_check_in:
+                for ci in valid_ci:
                     ci_time = datetime.combine(date_row, ci[0])
                     ci_end = ci_time + timedelta(minutes=ci[1])
                     if ci_end > end_dt:
                         cutoff = min(ci_end, end_dt + timedelta(hours=3))
-                        overlap = max(0, round((cutoff - max(ci_time, end_dt)).total_seconds() / 60))
-                        total_out_of_adherence += overlap
+                        total_out += max(0, round((cutoff - max(ci_time, end_dt)).total_seconds() / 60))
 
-            # --- CHECK-OUT ---
-            valid_check_out = [
+            # CHECK-OUT
+            valid_co = [
                 co for co in check_out_times
-                if datetime.combine(date_row, co[0]) > start_dt
-                and datetime.combine(date_row, co[0]) <= end_dt + timedelta(hours=4)
+                if start_dt < datetime.combine(date_row, co[0]) <= end_dt + timedelta(hours=4)
             ]
-            valid_check_out.sort()
+            valid_co.sort()
 
-            if valid_check_out:
+            if valid_co:
                 window_start = end_dt - timedelta(minutes=5)
                 near_end = [
-                    co for co in valid_check_out
+                    co for co in valid_co
                     if window_start <= datetime.combine(date_row, co[0]) <= end_dt
                 ]
-                check_out = near_end[0] if near_end else valid_check_out[-1]
+                check_out = near_end[0] if near_end else valid_co[-1]
 
-            if current_time < end_dt:
+            if now < end_dt:
                 check_out = None
 
-            for co in valid_check_out:
+            for co in valid_co:
                 co_time = datetime.combine(date_row, co[0])
                 co_end = co_time + timedelta(minutes=co[1])
                 if co_time <= end_dt:
-                    total_offline_minutes += max(0, round((min(co_end, end_dt) - co_time).total_seconds() / 60))
+                    total_off += max(0, round((min(co_end, end_dt) - co_time).total_seconds() / 60))
 
-            if valid_check_in:
-                attendance_records.append({
-                    "api_email": api_email,
-                    "date": date_row,
-                    "check_in": check_in[0],
-                    "check_out": check_out[0] if check_out else None,
-                    "status": status,
-                    "out_of_adherence": total_out_of_adherence,
-                    "offline_minutes": total_offline_minutes,
-                })
+            if valid_ci:
+                records.append((
+                    api_email,
+                    date_row,
+                    check_in[0],
+                    check_out[0] if check_out else None,
+                    status,
+                    total_out,
+                    total_off,
+                ))
                 inserted += 1
 
         loop_time = time_mod.perf_counter() - t6
@@ -188,12 +185,30 @@ async def process_and_persist_attendance(
             f"SinSchedule={no_schedule} | ScheduleInválido={invalid_schedule}"
         )
 
-        # 7️⃣ Inserción masiva
+        # 7️⃣ COPY ultra rápido (0.1s – 0.3s)
         t7 = time_mod.perf_counter()
-        if attendance_records:
-            session.bulk_insert_mappings(Attendance, attendance_records)
-            session.commit()
-        print(f"💾 [ATT-STEP 7] Bulk insert completado en {time_mod.perf_counter() - t7:.3f}s")
+
+        if records:
+            buffer = io.StringIO()
+            for r in records:
+                buffer.write(
+                    f"{r[0]}\t{r[1]}\t{r[2]}\t{r[3] if r[3] else '\\N'}\t{r[4]}\t{r[5]}\t{r[6]}\n"
+                )
+            buffer.seek(0)
+
+            conn = session.connection().connection
+            cursor = conn.cursor()
+            cursor.copy_from(
+                file=buffer,
+                table="attendance",
+                columns=("api_email", "date", "check_in", "check_out", "status", "out_of_adherence", "offline_minutes"),
+                sep="\t",
+                null="\\N",
+            )
+            conn.commit()
+            cursor.close()
+
+        print(f"💾 [ATT-STEP 7] COPY insert completado en {time_mod.perf_counter() - t7:.3f}s")
 
         total_time = time_mod.perf_counter() - start_total
         print(f"🏁 [ATT] Proceso completo OK | Insertados={inserted} | Tiempo total={total_time:.3f}s\n")

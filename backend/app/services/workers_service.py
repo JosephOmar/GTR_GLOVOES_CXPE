@@ -34,6 +34,8 @@ async def process_and_persist_workers(
 ) -> int:
     try:
         """Procesa los archivos Excel de trabajadores y persiste la información en BD con métricas de tiempo."""
+        
+        # Medición de tiempo total
         start_total = time.perf_counter()
 
         # 🕒 Tiempo 1: Lectura y concatenación
@@ -46,6 +48,8 @@ async def process_and_persist_workers(
             post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall: (
                 people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall)
         )
+        t2 = time.perf_counter()
+        print(f"⏳ Tiempo 1 (Lectura y concatenación): {t2 - t1:.4f} segundos")
 
         df_concentrix = generate_worker_cx_table(people_active, people_inactive, scheduling_ppp, api_id)
         df_ubycall = generate_worker_uby_table(master_glovo, scheduling_ubycall, api_id, people_active, people_inactive)
@@ -62,15 +66,14 @@ async def process_and_persist_workers(
         contract_map = upsert_lookup_table(session, ContractType, df["contract_type"].tolist())
 
         # 🕒 Tiempo 3: Preparación de registros
+        t3 = time.perf_counter()
         workers_data = []
         for row in df.to_dict(orient="records"):
-
-            # 🔧 Normalización segura de requirement_id
             req_id = row.get("requirement_id")
             if pd.isna(req_id) or req_id is None:
                 req_id = None
             else:
-                req_id = str(req_id).strip()  # fuerza todo a string limpio
+                req_id = str(req_id).strip()
 
             workers_data.append({
                 "document": str(row["document"]),
@@ -86,7 +89,7 @@ async def process_and_persist_workers(
                 "start_date": safe_date(row.get("start_date")),
                 "termination_date": safe_date(row.get("termination_date")),
                 "contract_type_id": contract_map.get(row["contract_type"]),
-                "requirement_id": req_id,  # 👈 ahora siempre str o None
+                "requirement_id": req_id,
                 "api_id": row.get("api_id"),
                 "api_name": row.get("api_name"),
                 "api_email": row.get("api_email"),
@@ -96,9 +99,18 @@ async def process_and_persist_workers(
                 "trainee": row.get("trainee"),
                 "productive": row.get("productive"),
             })
+        t4 = time.perf_counter()
+        print(f"⏳ Tiempo 3 (Preparación de registros): {t4 - t3:.4f} segundos")
 
         # 🕒 Tiempo 4: Procesar e insertar o actualizar en base de datos
+        t5 = time.perf_counter()
         total_processed = bulk_upsert_workers(session, workers_data)
+        t6 = time.perf_counter()
+        print(f"⏳ Tiempo 4 (Insertar o actualizar en BD): {t6 - t5:.4f} segundos")
+
+        # Medición de tiempo total
+        end_total = time.perf_counter()
+        print(f"🕒 Tiempo total: {end_total - start_total:.4f} segundos")
 
         return total_processed
 
