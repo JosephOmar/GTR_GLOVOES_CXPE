@@ -191,9 +191,11 @@ async def process_and_persist_attendance(
         if records:
             buffer = io.StringIO()
             for r in records:
+                co_value = r[3] if r[3] else "\\N"
                 buffer.write(
-                    f"{r[0]}\t{r[1]}\t{r[2]}\t{r[3] if r[3] else '\\N'}\t{r[4]}\t{r[5]}\t{r[6]}\n"
+                    f"{r[0]}\t{r[1]}\t{r[2]}\t{co_value}\t{r[4]}\t{r[5]}\t{r[6]}\n"
                 )
+
             buffer.seek(0)
 
             conn = session.connection().connection
