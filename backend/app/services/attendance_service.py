@@ -159,7 +159,12 @@ async def process_and_persist_attendance(
 
             if now < end_dt:
                 check_out = None
-
+                
+            if api_email == 'eajuarez.whl@service.glovoapp.com':
+                print(now)
+                print('xdxd')
+                print(end_dt)
+                print('xdxd')
             for co in valid_co:
                 co_time = datetime.combine(date_row, co[0])
                 co_end = co_time + timedelta(minutes=co[1])

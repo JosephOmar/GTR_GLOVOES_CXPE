@@ -7,8 +7,9 @@ QUEUE_MAPPING = {
     "VS-case-inbox-spa-ES-tier2": "Vendor Tier2",
     "RS-chat-spa-ES-tier1": "Rider Tier1",
     "RS-case-inbox-spa-ES-tier2": "Rider Tier2",
-    "CS-chat-spa-ES-tier1": "Customer Tier1",
     "CS-case-inbox-spa-ES-tier2": "Customer Tier2",
+    "CS-chat-spa-ES-live-order": "Customer Tier1",
+    "CS-chat-spa-ES-nonlive-order": "Customer Tier1",
 }
 
 def split_timestamp(value: str):
@@ -23,22 +24,19 @@ def split_timestamp(value: str):
         return pd.Series([None, None])
 
 def clean_real_time_data(data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Limpia y transforma el dataset proveniente del Excel de colas.
-    """
     # 1️⃣ Filtrar solo las colas relevantes
     data = data[data["queue_name"].isin(QUEUE_MAPPING.keys())].copy()
 
-    # 2️⃣ Reemplazar nombres de colas por nombres legibles
+    # 2️⃣ Reemplazar los nombres de cola por nombres de equipos
     data["queue_name"] = data["queue_name"].replace(QUEUE_MAPPING)
 
-    # 3️⃣ Separar timestamp en columnas 'date' y 'interval'
+    # 3️⃣ Dividir timestamp
     data[["date", "interval"]] = data["creation_timestamp_local"].apply(split_timestamp)
 
-    # 4️⃣ Eliminar filas donde date o interval estén vacíos (como los totales)
+    # 4️⃣ Quitar filas sin fecha u hora
     data = data.dropna(subset=["date", "interval"])
 
-    # 5️⃣ Renombrar columnas a nombres estándar
+    # 5️⃣ Renombrar columnas
     data = data.rename(
         columns={
             "queue_name": "team",
@@ -47,31 +45,50 @@ def clean_real_time_data(data: pd.DataFrame) -> pd.DataFrame:
         }
     )
 
+    # Convertir contacts_received a número
     data["contacts_received"] = (
         data["contacts_received"]
-        .str.replace(",", "", regex=False)  # Eliminar comas
-        .astype(float)  # Convertir a tipo float
+        .astype(str)
+        .str.replace(",", "", regex=False)
+    )
+    data["contacts_received"] = pd.to_numeric(
+        data["contacts_received"], errors="coerce"
     )
 
-    # 6️⃣ Limpieza de SLA (% → float)
+    # Convertir SLA FRT a decimal
     if "SLA FRT" in data.columns:
         data["SLA FRT"] = (
-            data["SLA FRT"]
-            .astype(str)
-            .str.replace("%", "", regex=False)
-            .str.strip()
+            data["SLA FRT"].astype(str).str.replace("%", "", regex=False).str.strip()
         )
-        data["SLA FRT"] = pd.to_numeric(data["SLA FRT"], errors="coerce") / 100.0
+        data["SLA FRT"] = pd.to_numeric(data["SLA FRT"], errors="coerce") / 100
 
-    # 7️⃣ Eliminar columnas innecesarias
-    if "pivot-grouping" in data.columns:
-        data = data.drop(columns=["pivot-grouping"])
+    # Convertir THT a float
+    if "THT" in data.columns:
+        data["THT"] = pd.to_numeric(data["THT"], errors="coerce")
 
-    # 8️⃣ Reordenar columnas finales
-    cols = ["team", "date", "interval", "contacts_received", "SLA FRT", "THT"]
-    data = data[[c for c in cols if c in data.columns]]
+    # ------------------------------------------
+    # 🔥 6️⃣ AGRUPACIÓN final con métricas correctas
+    # ------------------------------------------
 
-    # 9️⃣ Reiniciar índices
-    data.reset_index(drop=True, inplace=True)
+    # Para promedios ponderados
+    def weighted_avg(series, weights):
+        try:
+            return (series * weights).sum() / weights.sum()
+        except Exception:
+            return None
 
-    return data
+    group_cols = ["team", "date", "interval"]
+
+    grouped = data.groupby(group_cols).apply(
+        lambda g: pd.Series({
+            "contacts_received": g["contacts_received"].sum(),
+            "SLA FRT": weighted_avg(g["SLA FRT"], g["contacts_received"]) if "SLA FRT" in g else None,
+            "THT": weighted_avg(g["THT"], g["contacts_received"]) if "THT" in g else None,
+        })
+    ).reset_index()
+
+    # 7️⃣ Reordenar columnas
+    final_cols = ["team", "date", "interval", "contacts_received", "SLA FRT", "THT"]
+    grouped = grouped[[c for c in final_cols if c in grouped.columns]]
+    print(grouped[grouped['team'] == 'Customer Tier1'])
+    return grouped

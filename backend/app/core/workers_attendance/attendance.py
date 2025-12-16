@@ -31,8 +31,9 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
     # 6) Agrupar y construir resultado
     results = []
     for agent, group in data.groupby('api_email'):
-        offline = group[group['State'].str.upper() == 'OFFLINE']
-        check_in_group = group[group['State'].str.upper() != 'OFFLINE']
+        list_status = ['OFFLINE', 'UNAVAILABLE', 'BUSY']
+        offline = group[group['State'].str.upper().isin(list_status)]
+        check_in_group = group[~group['State'].str.upper().isin(list_status)]
 
         check_in_times = []
         check_out_times = []
@@ -57,4 +58,4 @@ def clean_attendance(data: pd.DataFrame, target_date: pd.Timestamp | None = None
             'check_out_times': check_out_times
         })
 
-    return pd.DataFrame(results)
+    return pd.DataFrame(results) 

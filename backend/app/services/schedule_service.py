@@ -15,11 +15,19 @@ from app.models.worker import Worker, Schedule, UbycallSchedule
 from app.core.utils.workers_cx.columns_names import DOCUMENT, DATE, START_TIME, END_TIME, DAY, BREAK_START, BREAK_END, REST_DAY
 
 def merge_schedule_concentrix(df_conc, df_ppp):
+    # Asegurar mismo tipo
     df_conc["document"] = df_conc["document"].astype(str)
     df_ppp["document"] = df_ppp["document"].astype(str)
 
-    cols_replace = ["start_time", "end_time", "break_start", "break_end", "rest_day"]
+    cols_replace = [
+        "start_time",
+        "end_time",
+        "break_start",
+        "break_end",
+        "rest_day"
+    ]
 
+    # Merge
     df_merged = df_conc.merge(
         df_ppp[["document", "start_date", "end_date"] + cols_replace],
         on=["document", "start_date"],
@@ -27,19 +35,34 @@ def merge_schedule_concentrix(df_conc, df_ppp):
         suffixes=("", "_ppp")
     )
 
-    # Reemplazar solo cuando PPP tiene datos
+    # Reemplazo campo a campo: PPP tiene prioridad SOLO si no es NaN
     for col in cols_replace:
         df_merged[col] = df_merged[f"{col}_ppp"].combine_first(df_merged[col])
 
-    # mantener end_date de conc si PPP no tiene
-    df_merged["end_date"] = df_merged["end_date_ppp"].combine_first(df_merged["end_date"])
+    # Mantener end_date de PPP si existe
+    df_merged["end_date"] = df_merged["end_date_ppp"].combine_first(
+        df_merged["end_date"]
+    )
 
-    # eliminar columnas auxiliares
-    df_merged = df_merged.drop(columns=[f"{col}_ppp" for col in cols_replace] + ["end_date_ppp"])
+    # 🔴 REGLA CLAVE:
+    # Si PPP marca rest_day = True, eliminar horarios aunque Concentrix tenga
+    mask_rest_ppp = df_merged["rest_day_ppp"] == True
 
-    # reemplazar NaN por None
+    df_merged.loc[mask_rest_ppp, [
+        "start_time",
+        "end_time",
+        "break_start",
+        "break_end"
+    ]] = None
+
+    # Eliminar columnas auxiliares
+    df_merged = df_merged.drop(
+        columns=[f"{col}_ppp" for col in cols_replace] + ["end_date_ppp"]
+    )
+
+    # Reemplazar NaN por None (para DB)
     df_merged = df_merged.where(pd.notnull(df_merged), None)
-
+    print(df_merged[df_merged['document'] == '45379714'])
     return df_merged
 
 # Función para dividir los registros en lotes de un tamaño determinado (por defecto, 2000 registros)
@@ -168,6 +191,10 @@ async def process_and_persist_schedules(
 
         for row in df_conc.itertuples(index=False):
             doc = str(row.document).strip()
+
+            if doc not in existing_docs:
+                continue
+            
             key = (doc, row.start_date)
 
             existing = existing_conc.get(key)
