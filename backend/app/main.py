@@ -18,7 +18,8 @@ from app.routers import (
     users,
     attendance,
     real_time_data,
-    sla_breached
+    sla_breached,
+    contacts_with_ccr
 )
 
 # --- Nueva forma recomendada: lifespan ---
@@ -71,6 +72,7 @@ app.include_router(users.router)
 app.include_router(attendance.router)
 app.include_router(real_time_data.router)
 app.include_router(sla_breached.router)
+app.include_router(contacts_with_ccr.router)
 
 
 # Dependencia para obtener la sesión

@@ -29,6 +29,13 @@ EXCEL_READ_CONFIGS: Dict[str, Dict[str, Any]] = {
     "planned_data":    {"sheet_name": "DDPP", "engine": "openpyxl"},
 }
 
+CSV_READ_CONFIGS = {
+    "contacts_with_ccr": {
+        "engine": "python",
+        "drop_last_row": True,
+    }
+}
+
 
 def read_file_safely(file_stream: io.BytesIO, filename: str) -> pd.DataFrame:
     """
@@ -62,7 +69,31 @@ def read_file_safely(file_stream: io.BytesIO, filename: str) -> pd.DataFrame:
             raw = file_stream.read()
             encoding = chardet.detect(raw).get("encoding", "utf-8")
             file_stream.seek(0)
-            return pd.read_csv(file_stream, encoding=encoding)
+
+            text = raw.decode(encoding, errors="ignore")
+
+            # 🔥 eliminar última línea corrupta ANTES del parseo
+            lines = text.splitlines()
+            if len(lines) > 1:
+                text = "\n".join(lines[:-1])
+
+            cleaned_stream = io.StringIO(text)
+
+            # buscar config
+            csv_config = None
+            for kw, cfg in CSV_READ_CONFIGS.items():
+                if kw in lower:
+                    csv_config = cfg
+                    break
+
+            df = pd.read_csv(
+                cleaned_stream,
+                engine=csv_config.get("engine") if csv_config else "python",
+                sep=None,               # autodetecta
+                on_bad_lines="skip",    # extra seguridad
+            )
+
+            return df
         except Exception as e:
             raise ValueError(f"Error leyendo CSV '{filename}': {e}")
 
