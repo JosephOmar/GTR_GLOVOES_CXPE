@@ -16,7 +16,7 @@ def clean_contacts_with_ccr(data: pd.DataFrame):
     # Limpieza básica
     # ─────────────────────
     data = data[data['queue_name'].isin(QUEUE_NAMES.keys())].copy()
-
+    data = data[data['resolution_time']!=0]
     # ─────────────────────
     # Timestamp (UTC)
     # ─────────────────────
