@@ -18,7 +18,8 @@ def merge_schedule_concentrix(df_conc, df_ppp):
     # Asegurar mismo tipo
     df_conc["document"] = df_conc["document"].astype(str)
     df_ppp["document"] = df_ppp["document"].astype(str)
-
+    print(df_conc[df_conc['document'] == '76122968'])
+    print(df_ppp[df_ppp['document'] == '76122968'])
     cols_replace = [
         "start_time",
         "end_time",
@@ -62,7 +63,7 @@ def merge_schedule_concentrix(df_conc, df_ppp):
 
     # Reemplazar NaN por None (para DB)
     df_merged = df_merged.where(pd.notnull(df_merged), None)
-    print(df_merged[df_merged['document'] == '45379714'])
+    print(df_merged[df_merged['document'] == '76122968'])
     return df_merged
 
 # Función para dividir los registros en lotes de un tamaño determinado (por defecto, 2000 registros)
@@ -105,14 +106,19 @@ async def process_and_persist_schedules(
         # Tiempo 2: Cálculo de semana
         t3 = time.perf_counter()
         today = datetime.date.today()
-        year = year or today.year
-        week = week or today.isocalendar()[1]
+        iso_year, iso_week, _ = today.isocalendar()
+
+        year = year or iso_year
+        week = week or iso_week
+
         monday_curr = datetime.date.fromisocalendar(year, week, 1)
         sunday_curr = monday_curr + timedelta(days=6)
         monday_prev = monday_curr - timedelta(days=7)
+
         t4 = time.perf_counter()
         print(f"⏳ Tiempo 2 (Cálculo de semana): {t4 - t3:.4f} segundos")
-
+        print(today)
+        print(monday_curr)
         # Tiempo 3: Purga histórica
         t5 = time.perf_counter()
         session.exec(delete(Schedule).where(Schedule.start_date < monday_prev))

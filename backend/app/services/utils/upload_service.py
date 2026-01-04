@@ -21,8 +21,12 @@ EXCEL_READ_CONFIGS: Dict[str, Dict[str, Any]] = {
         "engine": "openpyxl",
     },
     "api_id": {},      # si necesita algo especial, lo pones aquí
-    "master_glovo": {
+    "master_concentrix": {
         "sheet_name": "AGENTES_UBY",
+        "engine": "openpyxl",
+    },
+    "master_ubycall": {
+        "sheet_name": "AGENTES_GLOVO",
         "engine": "openpyxl",
     },
     "scheduling_ubycall": {},   # idem

@@ -9,7 +9,6 @@ COLUMNS_SCHEDULING_PPP = {
     "Observaciones 2°": OBSERVATION_2,
     # "Usuarios" : api_email,
     "ID" : REQUIREMENT_ID,
-    "SUPERVISOR" : SUPERVISOR,
     "Productivo": PRODUCTIVE
 }
 
@@ -35,6 +34,6 @@ def clean_scheduling_ppp(data: pd.DataFrame) -> pd.DataFrame:
     data[OBSERVATION_2] = data[OBSERVATION_2].astype(str).str.strip().apply(clean_observations)
 
     # 🧽 Mantener solo las columnas necesarias
-    data = data[[DOCUMENT,TEAM, REQUIREMENT_ID, SUPERVISOR, OBSERVATION_1, OBSERVATION_2, PRODUCTIVE]]
+    data = data[[DOCUMENT,TEAM, REQUIREMENT_ID, OBSERVATION_1, OBSERVATION_2, PRODUCTIVE]]
 
     return data

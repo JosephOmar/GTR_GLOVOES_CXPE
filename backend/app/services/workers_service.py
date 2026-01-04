@@ -40,19 +40,19 @@ async def process_and_persist_workers(
 
         # 🕒 Tiempo 1: Lectura y concatenación
         t1 = time.perf_counter()
-        people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall = await handle_file_upload_generic(
+        people_active, people_inactive, scheduling_ppp, api_id, master_glovo_cx, master_glovo_uby, scheduling_ubycall = await handle_file_upload_generic(
             files=files,
             validator=validate_excel_workers,
             keyword_to_slot=FILES_WORKER_SERVICE,
             required_slots=list(FILES_WORKER_SERVICE.values()),
-            post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall: (
-                people_active, people_inactive, scheduling_ppp, api_id, master_glovo, scheduling_ubycall)
+            post_process=lambda people_active, people_inactive, scheduling_ppp, api_id, master_glovo_cx, master_glovo_uby, scheduling_ubycall: (
+                people_active, people_inactive, scheduling_ppp, api_id, master_glovo_cx, master_glovo_uby, scheduling_ubycall)
         )
         t2 = time.perf_counter()
         print(f"⏳ Tiempo 1 (Lectura y concatenación): {t2 - t1:.4f} segundos")
 
-        df_concentrix = generate_worker_cx_table(people_active, people_inactive, scheduling_ppp, api_id)
-        df_ubycall = generate_worker_uby_table(master_glovo, scheduling_ubycall, api_id, people_active, people_inactive)
+        df_concentrix = generate_worker_cx_table(people_active, people_inactive, scheduling_ppp, api_id, master_glovo_cx)
+        df_ubycall = generate_worker_uby_table(master_glovo_uby, scheduling_ubycall, api_id, people_active, people_inactive)
 
         df = pd.concat([df_concentrix, df_ubycall], ignore_index=True)
         df = df.where(pd.notnull(df), None)

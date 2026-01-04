@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, UploadFile, Depends, File, HTTPException
 from sqlmodel import Session
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 
 from app.database.database import get_session
 from app.services.contacts_with_ccr import contacts_with_ccr_service
@@ -45,3 +46,25 @@ def read_contacts_with_ccr(
         print(f"Error inesperado: {str(e)}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+@router.delete(
+    "/truncate-contacts-with-ccr/",
+    summary="Elimina todos los registros de contactsreceived y contactsreceivedreason"
+)
+def truncate_contacts_with_ccr(
+    session: Session = Depends(get_session),
+):
+    try:
+        session.exec(text("TRUNCATE contactsreceivedreason;"))
+        session.exec(text("TRUNCATE contactsreceived CASCADE;"))
+        session.commit()
+        return {"detail": "Tablas truncadas correctamente"}
+    
+    except SQLAlchemyError as e:
+        session.rollback()
+        print(f"Error de base de datos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno de la base de datos")
+    
+    except Exception as e:
+        session.rollback()
+        print(f"Error inesperado: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")

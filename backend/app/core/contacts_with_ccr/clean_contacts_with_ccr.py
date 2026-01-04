@@ -16,7 +16,10 @@ def clean_contacts_with_ccr(data: pd.DataFrame):
     # Limpieza básica
     # ─────────────────────
     data = data[data['queue_name'].isin(QUEUE_NAMES.keys())].copy()
-
+    print(data[data['queue_name'] == 'VS-case-inbox-spa-ES-tier2'])
+    data['resolution_time'] = pd.to_numeric(data['resolution_time'], errors='coerce')
+    data = data[data['resolution_time'] != 0].copy()
+    print(data[data['queue_name'] == 'VS-case-inbox-spa-ES-tier2'])
     # ─────────────────────
     # Timestamp (UTC)
     # ─────────────────────
