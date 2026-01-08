@@ -10,16 +10,17 @@ QUEUE_NAMES = {
     'CS-chat-spa-ES-nonlive-order': 'Customer Non Live'
 }
 
+COUNTRY = ['ES', 'PT']
+
 def clean_contacts_with_ccr(data: pd.DataFrame):
 
     # ─────────────────────
     # Limpieza básica
     # ─────────────────────
     data = data[data['queue_name'].isin(QUEUE_NAMES.keys())].copy()
-    print(data[data['queue_name'] == 'VS-case-inbox-spa-ES-tier2'])
+    data = data[data['country'].isin(COUNTRY)].copy()
     data['resolution_time'] = pd.to_numeric(data['resolution_time'], errors='coerce')
     data = data[data['resolution_time'] != 0].copy()
-    print(data[data['queue_name'] == 'VS-case-inbox-spa-ES-tier2'])
     # ─────────────────────
     # Timestamp (UTC)
     # ─────────────────────
@@ -29,11 +30,42 @@ def clean_contacts_with_ccr(data: pd.DataFrame):
         utc=True
     )
 
+    mask_dec31_11pm = (
+        (data['creation_timestamp_utc'].dt.year == 2025) &
+        (data['creation_timestamp_utc'].dt.month == 12) &
+        (data['creation_timestamp_utc'].dt.day == 31) &
+        (data['creation_timestamp_utc'].dt.hour == 23) &
+        (data['queue_name'] == 'VS-case-inbox-spa-ES-tier2')
+    )
+
+    dec31_11pm_data = data[mask_dec31_11pm]
+
+    print("📌 Registros 31/12/2025 - 11 PM (UTC):")
+    print(dec31_11pm_data[['creation_timestamp_local', 'creation_timestamp_utc', 'ticket_id']])
+
+    print("Cantidad total:", len(dec31_11pm_data))
+
     # ─────────────────────
     # Zonas horarias
     # ─────────────────────
     data['timestamp_pe'] = data['creation_timestamp_utc'].dt.tz_convert('America/Lima')
     data['timestamp_es'] = data['creation_timestamp_utc'].dt.tz_convert('Europe/Madrid')
+
+    pe_count = dec31_11pm_data.assign(
+        timestamp_pe=dec31_11pm_data['creation_timestamp_utc'].dt.tz_convert('America/Lima')
+    )
+
+    es_count = dec31_11pm_data.assign(
+        timestamp_es=dec31_11pm_data['creation_timestamp_utc'].dt.tz_convert('Europe/Madrid')
+    )
+
+    print("\n🇵🇪 Transformados a timestamp_pe:")
+    print(pe_count[['creation_timestamp_utc', 'timestamp_pe']])
+    print("Cantidad PE:", len(pe_count))
+
+    print("\n🇪🇸 Transformados a timestamp_es:")
+    print(es_count[['creation_timestamp_utc', 'timestamp_es']])
+    print("Cantidad ES:", len(es_count))
 
     data['date_pe'] = data['timestamp_pe'].dt.date
     data['interval_pe'] = data['timestamp_pe'].dt.strftime('%H:00')

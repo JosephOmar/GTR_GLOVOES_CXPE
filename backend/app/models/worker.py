@@ -5,7 +5,7 @@ import datetime
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=30, unique=True)
+    name: str = Field(max_length=50, unique=True)
 
     workers: List["Worker"] = Relationship(back_populates="role")
 
